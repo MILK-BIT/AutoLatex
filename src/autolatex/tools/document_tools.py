@@ -2,20 +2,20 @@ import json
 import os
 from typing import Any, Dict
 
-try:
-    from crewai_tools import BaseTool  # type: ignore
-except ImportError:  # pragma: no cover
-    class BaseTool:  # type: ignore
-        """Fallback BaseTool 用于本地测试。"""
+# try:
+from crewai.tools import BaseTool  # type: ignore
+# except ImportError:  # pragma: no cover
+#     class BaseTool:  # type: ignore
+#         """Fallback BaseTool 用于本地测试。"""
 
-        name: str = ""
-        description: str = ""
+#         name: str = ""
+#         description: str = ""
 
-        def __init__(self, *args, **kwargs):
-            pass
+#         def __init__(self, *args, **kwargs):
+#             pass
 
-        def _run(self, *args, **kwargs):
-            raise NotImplementedError("BaseTool fallback does not implement _run.")
+#         def _run(self, *args, **kwargs):
+#             raise NotImplementedError("BaseTool fallback does not implement _run.")
 
 try:
     from .docx_parser import parse_docx_to_json
