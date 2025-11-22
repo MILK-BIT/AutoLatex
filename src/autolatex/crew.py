@@ -3,7 +3,8 @@ from crewai.project import CrewBase, agent, crew, task
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from typing import List
 from .model import DocumentStructure, EquationList 
-from autolatex.tools.document_tools import DocumentParserTool
+from autolatex.tools.document_tools import DocumentParserTool, LaTeXCompilerTool
+from autolatex.tools.ocr_tool import DeepSeekOCRTool
 
 @CrewBase
 class Autolatex():
@@ -54,7 +55,7 @@ class Autolatex():
             config=self.agents_config['latex_debugger_agent'],
             verbose=True,
             # 提示：这个 Agent 必须有执行编译命令的工具
-            # tools=[LatexCompilerTool(), FileReadTool()] 
+            tools=[LaTeXCompilerTool()] 
         )
     
     # --- 5. deepseek-OCR调用agent ---
@@ -63,8 +64,7 @@ class Autolatex():
         return Agent(
             config=self.agents_config['latex_equation_form_agent'],
             # 关键点：这里必须给它一个能调用 DeepSeek OCR API 的工具
-            # 假设你写了一个叫 DeepSeekOCRTool 的自定义工具
-            # tools=[DeepSeekOCRTool()], 
+            tools=[DeepSeekOCRTool()], 
             verbose=True
         )
     
