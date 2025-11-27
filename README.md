@@ -31,28 +31,6 @@ autolatex/
             └── tasks.yaml
 ```
 
-
-
-```cmd
-autolatex/
-├── .gitignore
-├── knowledge/
-├── pyproject.toml
-├── README.md
-├── .env
-└── src/
-    └── autolatex/
-        ├── __init__.py
-        ├── main.py
-        ├── crew.py
-        ├── tools/
-        │   ├── custom_tool.py
-        │   └── __init__.py
-        └── config/
-            ├── agents.yaml
-            └── tasks.yaml
-```
-
 .env 需要放入你的api和key
 我用的deepseek
 ```cmd
