@@ -40,6 +40,10 @@ class DocumentParserTool(BaseTool):
     description: str = "解析 Word, Markdown, 或 Txt 文件，返回其结构化的 JSON 内容。"
 
     def _run(self, file_path: str) -> str:
+        # 统一将传入路径转换为绝对路径，避免相对路径导致的 File Not Found 问题
+        file_path = os.path.abspath(file_path)
+        print(f"[DocumentParserTool] 正在处理文件: {file_path}")
+
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"文件不存在: {file_path}")
 
@@ -67,13 +71,18 @@ class LaTeXCompilerTool(BaseTool):
     name: str = "LaTeX Compiler and Debugger Tool"
     description: str = "编译一个 .tex 文件。如果成功，返回 PDF 路径；如果失败，返回完整的编译错误日志。"
       
-    def _run(self, latex_content: str, journal_template_files_json: str = "{}") -> str:
-        try:
-            templates = json.loads(journal_template_files_json)
-        except json.JSONDecodeError as exc:
-            raise ValueError("journal_template_files_json 不是有效的 JSON 字符串。") from exc
+    def _run(self, latex_content: str, template_dir_path: str) -> str:
+        """
+        template_dir_path: 宿主机上的模板文件夹绝对路径，将被复制到编译环境中。
+        """
+        if not template_dir_path:
+            raise ValueError("template_dir_path 不能为空。")
+        if not os.path.isabs(template_dir_path):
+            raise ValueError("template_dir_path 必须是宿主机上的绝对路径。")
+        if not os.path.isdir(template_dir_path):
+            raise FileNotFoundError(f"模板目录不存在: {template_dir_path}")
 
-        result = compile_latex_to_pdf(latex_content, templates)
+        result = compile_latex_to_pdf(latex_content, template_dir_path)
         if result.success:
             response = {
                 "message": "PDF 编译成功。",
