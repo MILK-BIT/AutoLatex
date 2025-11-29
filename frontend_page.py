@@ -152,7 +152,7 @@ custom_css = """
 
 /* 主内容区 */
 .main-content {
-    margin-left: 250px !important;
+    margin-left: 250px;
     flex: 1;
     background: #f5f5f5;
     min-height: 100vh;
@@ -179,8 +179,148 @@ custom_css = """
 .content-wrapper {
     position: relative;
     z-index: 1;
-    max-width: 900px;
+    max-width: 1200px;
+    width: 100%;
     margin: 0 auto;
+}
+
+/* 日志卡片 */
+.log-card {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 24px;
+    margin-top: 30px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+.log-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.log-card-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.log-card-desc {
+    font-size: 13px;
+    color: #6b7280;
+    margin-top: 4px;
+}
+
+.log-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.log-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.log-status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #d1d5db;
+    box-shadow: 0 0 0 3px rgba(209, 213, 219, 0.3);
+}
+
+.log-status-dot[data-state="connected"] {
+    background: #22c55e;
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.25);
+}
+
+.log-status-dot[data-state="connecting"] {
+    background: #fbbf24;
+    box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.25);
+}
+
+.log-status-dot[data-state="disconnected"] {
+    background: #ef4444;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+}
+
+.log-clear-btn {
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    background: #f9fafb;
+    color: #374151;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.log-clear-btn:hover {
+    background: #eef2ff;
+    border-color: #c7d2fe;
+    color: #4338ca;
+}
+
+.log-viewer {
+    background: #0f172a;
+    border-radius: 14px;
+    padding: 16px;
+    min-height: 260px;
+    max-height: 360px;
+    overflow-y: auto;
+    border: 1px solid #1e293b;
+    font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+}
+
+.log-line {
+    display: grid;
+    grid-template-columns: 140px 80px 1fr;
+    gap: 12px;
+    font-size: 13px;
+    color: #e2e8f0;
+    padding: 4px 0;
+}
+
+.log-time {
+    color: #94a3b8;
+}
+
+.log-tag {
+    color: #c4b5fd;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+}
+
+.log-message {
+    color: #f8fafc;
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+
+.log-line.log-level-error .log-tag {
+    color: #f87171;
+}
+
+.log-line.log-level-error .log-message {
+    color: #fecaca;
+}
+
+.log-line.log-level-success .log-tag {
+    color: #34d399;
+}
+
+.log-placeholder {
+    text-align: center;
+    color: #94a3b8;
+    padding: 32px 0;
+    font-size: 13px;
 }
 
 /* 横幅 */
@@ -413,6 +553,15 @@ body, html {
     padding: 30px 40px;
 }
 
+.sidebar-collapsed .main-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+}
+
+.sidebar-collapsed #root > div > div {
+    margin-left: 0 !important;
+}
+
 /* 按钮样式覆盖 */
 button.upload-button {
     background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%) !important;
@@ -462,7 +611,7 @@ sidebar_html = """
             <div class="logo-icon">AT</div>
             <div class="logo-text">AutoTex</div>
         </div>
-        <div class="collapse-icon" id="sidebar-toggle">←</div>
+        <div class="collapse-icon" id="sidebar-toggle" onclick="window.toggleSidebar()">←</div>
     </div>
     <div class="nav-menu">
         <div class="nav-item active">
@@ -510,6 +659,27 @@ title_html = """
 </div>
 """
 
+log_card_html = """
+<div class="log-card">
+    <div class="log-card-header">
+        <div>
+            <div class="log-card-title">实时运行日志</div>
+            <div class="log-card-desc">覆盖 Crew verbose 输出，便于排查任务执行过程</div>
+        </div>
+        <div class="log-header-actions">
+            <div class="log-status">
+                <span class="log-status-dot" id="log-status-dot" data-state="connecting"></span>
+                <span id="log-status-text">正在连接日志服务...</span>
+            </div>
+            <button class="log-clear-btn" id="clear-log-btn">清空日志</button>
+        </div>
+    </div>
+    <div class="log-viewer" id="log-viewer">
+        <div class="log-placeholder">等待连接 AutoLaTeX 后端日志流...</div>
+    </div>
+</div>
+"""
+
 
 def process_file(file, journal_type):
     """处理上传的文件并生成LaTeX"""
@@ -521,6 +691,59 @@ def process_file(file, journal_type):
     return f"论文文件已上传: {file.name}\n选择的期刊类型: {journal_type}\n正在生成LaTeX文件..."
 
 # JavaScript 代码用于布局调整
+sidebar_toggle_js = """
+<script>
+window.toggleSidebar = window.toggleSidebar || function() {
+    const sidebar = document.querySelector('.sidebar');
+    const mainContent = document.querySelector('.main-content');
+    let expandBtn = document.getElementById('expand-sidebar-btn');
+    const body = document.body;
+
+    if (!expandBtn) {
+        expandBtn = document.createElement('div');
+        expandBtn.id = 'expand-sidebar-btn';
+        expandBtn.className = 'expand-sidebar-btn';
+        expandBtn.textContent = '→';
+        expandBtn.onclick = function() { window.showSidebar(); };
+        expandBtn.style.display = 'none';
+        document.body.appendChild(expandBtn);
+    }
+
+    if (sidebar && mainContent) {
+        sidebar.style.display = 'none';
+        sidebar.style.left = '-250px';
+        mainContent.style.marginLeft = '0';
+        mainContent.style.width = '100%';
+        expandBtn.style.display = 'flex';
+        if (body) {
+            body.classList.add('sidebar-collapsed');
+        }
+    }
+};
+
+window.showSidebar = window.showSidebar || function() {
+    const sidebar = document.querySelector('.sidebar');
+    const mainContent = document.querySelector('.main-content');
+    const expandBtn = document.getElementById('expand-sidebar-btn');
+    const body = document.body;
+
+    if (sidebar && mainContent) {
+        sidebar.style.display = 'flex';
+        sidebar.style.left = '0';
+        mainContent.style.marginLeft = '250px';
+        mainContent.style.width = 'calc(100% - 250px)';
+        if (expandBtn) {
+            expandBtn.style.display = 'none';
+        }
+        if (body) {
+            body.classList.remove('sidebar-collapsed');
+        }
+    }
+};
+</script>
+"""
+
+
 layout_js = """
 <script>
 // 确保函数在全局作用域中定义
@@ -528,6 +751,7 @@ window.toggleSidebar = function() {
     const sidebar = document.querySelector('.sidebar');
     const mainContent = document.querySelector('.main-content');
     let expandBtn = document.getElementById('expand-sidebar-btn');
+    const body = document.body;
     
     if (!expandBtn) {
         expandBtn = document.createElement('div');
@@ -545,6 +769,9 @@ window.toggleSidebar = function() {
         mainContent.style.marginLeft = '0';
         mainContent.style.width = '100%';
         expandBtn.style.display = 'flex';
+        if (body) {
+            body.classList.add('sidebar-collapsed');
+        }
     }
 };
 
@@ -552,6 +779,7 @@ window.showSidebar = function() {
     const sidebar = document.querySelector('.sidebar');
     const mainContent = document.querySelector('.main-content');
     const expandBtn = document.getElementById('expand-sidebar-btn');
+    const body = document.body;
     
     if (sidebar && mainContent) {
         sidebar.style.display = 'flex';
@@ -560,6 +788,9 @@ window.showSidebar = function() {
         mainContent.style.width = 'calc(100% - 250px)';
         if (expandBtn) {
             expandBtn.style.display = 'none';
+        }
+        if (body) {
+            body.classList.remove('sidebar-collapsed');
         }
     }
 };
@@ -724,11 +955,101 @@ window.showSidebar = function() {
 </script>
 """
 
+log_viewer_js = """
+<script>
+(function() {
+    const MAX_LINES = 400;
+    function initLogViewer() {
+        const logContainer = document.getElementById('log-viewer');
+        const statusDot = document.getElementById('log-status-dot');
+        const statusText = document.getElementById('log-status-text');
+        const clearBtn = document.getElementById('clear-log-btn');
+        if (!logContainer) {
+            return;
+        }
+
+        const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        const host = window.AUTOLATEX_API_HOST || window.location.hostname;
+        const port = window.AUTOLATEX_API_PORT || '8000';
+        const wsUrl = `${protocol}://${host}:${port}/ws/logs`;
+
+        function setStatus(state, text) {
+            if (statusDot) {
+                statusDot.dataset.state = state;
+            }
+            if (statusText) {
+                statusText.textContent = text;
+            }
+        }
+
+        function renderLine(event) {
+            const wrapper = document.createElement('div');
+            const level = (event.level || 'INFO').toLowerCase();
+            wrapper.className = `log-line log-level-${level}`;
+            wrapper.innerHTML = `
+                <span class="log-time">${event.timestamp || ''}</span>
+                <span class="log-tag">${(event.source || '').toUpperCase()}</span>
+                <span class="log-message">${event.message || ''}</span>
+            `;
+            logContainer.appendChild(wrapper);
+            if (logContainer.children.length > MAX_LINES) {
+                logContainer.removeChild(logContainer.firstChild);
+            }
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        function connect() {
+            setStatus('connecting', '正在连接日志服务...');
+            const socket = new WebSocket(wsUrl);
+
+            socket.onopen = () => {
+                setStatus('connected', '实时日志已连接');
+            };
+
+            socket.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (logContainer.firstElementChild && logContainer.firstElementChild.classList.contains('log-placeholder')) {
+                        logContainer.innerHTML = '';
+                    }
+                    renderLine(data);
+                } catch (error) {
+                    console.error('解析日志失败', error);
+                }
+            };
+
+            socket.onclose = () => {
+                setStatus('disconnected', '连接断开，准备重试...');
+                setTimeout(connect, 3000);
+            };
+
+            socket.onerror = () => {
+                socket.close();
+            };
+        }
+
+        clearBtn?.addEventListener('click', () => {
+            logContainer.innerHTML = '';
+        });
+
+        connect();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initLogViewer);
+    } else {
+        initLogViewer();
+    }
+})();
+</script>
+"""
+
 def create_interface():
-    with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as app:
-        # 添加布局 JavaScript
-        gr.HTML(layout_js)
-        
+    with gr.Blocks(
+        css=custom_css,
+        theme=gr.themes.Soft(),
+        head=sidebar_toggle_js + layout_js + log_viewer_js,
+    ) as app:
         # 添加侧边栏 HTML（固定在左侧）
         gr.HTML(sidebar_html)
         
@@ -825,6 +1146,9 @@ def create_interface():
                     inputs=[file_upload],
                     outputs=[output]
                 )
+
+                # 实时日志卡片
+                gr.HTML(log_card_html)
     
     return app
 
