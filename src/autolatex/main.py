@@ -21,7 +21,7 @@ def run():
         'topic': '自动将word、txt、markdown格式论文转化为Latex格式论文',
         'current_year': str(datetime.now().year),
         'file_path': r'test_data\docx_samples\sample_paper_full.docx',
-        'journal_name':'CVPR',
+        'journal_name':'IEEE_Access_LaTeX_template',
         
     }
 

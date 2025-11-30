@@ -59,7 +59,7 @@ class Autolatex():
             config=self.agents_config['latex_debugger_agent'],
             verbose=True,
             # 提示：这个 Agent 必须有执行编译命令的工具
-            tools=[LaTeXCompilerTool()] 
+            tools=[LaTeXCompilerTool()]
         )
     
     # --- 5. deepseek-OCR调用agent ---
