@@ -1,7 +1,9 @@
 import gradio as gr
 import os
 import sys
+import shutil
 from pathlib import Path
+import requests
 
 # 添加项目根目录到路径，以便支持直接运行和模块导入
 # 计算项目根目录（src/ 的父目录）
@@ -566,23 +568,89 @@ def preview_template(template_name: str) -> str:
         return f"预览模板失败: {str(e)}"
 
 def process_file(file, journal_type):
-    """处理上传的文件并生成LaTeX"""
+    """处理上传的文件并生成LaTeX（通过后端 REST API 上传 + 转换）"""
+    print("[Web UI] process_file 被调用")  # 调试日志
     if file is None:
+        print("[Web UI] 未选择文件")
         return "请先上传论文文件"
-    
-    # 验证模板是否存在
-    if journal_type and journal_type != "自定义模板":
-        try:
-            tool = TemplateRetrievalTool()
-            template_content = tool._run(journal_type)
-            if template_content.startswith("错误："):
-                return f"❌ {template_content}\n\n请检查模板名称是否正确。"
-        except Exception as e:
-            return f"❌ 模板验证失败: {str(e)}"
-    
-    # 这里应该调用实际的LaTeX转换逻辑
-    # 目前返回模拟结果
-    return f"论文文件已上传: {file.name}\n选择的期刊类型: {journal_type}\n正在生成LaTeX文件..."
+
+    # 1. 调用后端 /api/v1/paper/upload 接口上传文件
+    api_base = os.environ.get("AUTOLATEX_API_BASE", "http://127.0.0.1:8000")
+    upload_url = f"{api_base}/api/v1/paper/upload"
+    convert_url = f"{api_base}/api/v1/paper/convert"
+
+    try:
+        # Gradio `file` 为一个带临时路径的对象，file.name 为临时文件路径
+        # 尝试获取原始文件名（部分 Gradio 版本会带有 orig_name）
+        orig_name = getattr(file, "orig_name", None) or os.path.basename(file.name)
+
+        print(f"[Web UI] 准备上传文件: {orig_name}, 临时路径: {file.name}")
+        with open(file.name, "rb") as f:
+            files = {"file": (orig_name, f, "application/octet-stream")}
+            resp = requests.post(upload_url, files=files, timeout=60)
+
+        if resp.status_code != 200:
+            print(f"[Web UI] 上传接口 HTTP {resp.status_code}: {resp.text}")
+            return f"❌ 调用上传接口失败，HTTP {resp.status_code}: {resp.text}"
+
+        data = resp.json()
+        print(f"[Web UI] 上传接口返回: {data}")
+        if not data.get("success"):
+            return f"❌ 上传接口返回失败: {data.get('message') or data}"
+
+        file_path = data.get("file_path")
+        filename = data.get("filename", orig_name)
+    except Exception as e:
+        print(f"[Web UI] 通过 REST API 上传文件失败: {e}")
+        return f"❌ 通过 REST API 上传文件失败: {str(e)}"
+
+    # 2. 调用 /api/v1/paper/convert 进行论文转换
+    try:
+        payload = {
+            "file_path": file_path,
+            "journal_name": journal_type or "",
+            "topic": "自动将word、txt、markdown格式论文转化为Latex格式论文",
+        }
+        print(f"[Web UI] 调用转换接口, payload={payload}")
+        resp_conv = requests.post(convert_url, json=payload, timeout=600)
+        if resp_conv.status_code != 200:
+            print(f"[Web UI] 转换接口 HTTP {resp_conv.status_code}: {resp_conv.text}")
+            return (
+                "✅ 文件上传成功，但转换接口调用失败。\n"
+                f"文件名: {filename}\n"
+                f"后端保存路径: {file_path}\n\n"
+                f"调用 /api/v1/paper/convert 失败，HTTP {resp_conv.status_code}: {resp_conv.text}"
+            )
+
+        conv_data = resp_conv.json()
+        print(f"[Web UI] 转换接口返回: {conv_data}")
+        if not conv_data.get("success"):
+            return (
+                "✅ 文件上传成功，但转换失败。\n"
+                f"文件名: {filename}\n"
+                f"后端保存路径: {file_path}\n\n"
+                f"转换消息: {conv_data.get('message')}\n"
+                f"错误信息: {conv_data.get('error')}"
+            )
+
+        output_path = conv_data.get("output_path")
+        message = conv_data.get("message", "论文转换成功")
+
+        return (
+            f"✅ 论文文件已通过 REST API 上传并转换成功。\n"
+            f"文件名: {filename}\n"
+            f"上传保存路径: {file_path}\n\n"
+            f"转换结果: {message}\n"
+            f"LaTeX 输出路径: {output_path}"
+        )
+    except Exception as e:
+        print(f"[Web UI] 调用转换接口异常: {e}")
+        return (
+            "✅ 文件上传成功，但在调用转换接口时发生异常。\n"
+            f"文件名: {filename}\n"
+            f"后端保存路径: {file_path}\n\n"
+            f"异常信息: {str(e)}"
+        )
 
 # JavaScript 代码用于布局调整
 sidebar_toggle_js = """
@@ -935,8 +1003,8 @@ def create_interface():
                 
                 # 输出区域（用于显示处理结果）
                 output = gr.Textbox(
-                    label="",
-                    visible=False,
+                    label="处理结果",
+                    visible=True,   # 默认显示，便于直接看到上传/转换结果
                     interactive=False
                 )
                 
