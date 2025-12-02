@@ -7,6 +7,7 @@ from autolatex.tools.document_tools import DocumentParserTool
 from autolatex.tools.latex_tools import LaTeXCompilerTool
 from autolatex.tools.ocr_tool import DeepSeekOCRTool
 from autolatex.tools.knowledge_tools import KnowledgeBaseSearchTool
+from crewai import LLM
 
 @CrewBase
 class Autolatex():
@@ -25,6 +26,11 @@ class Autolatex():
     def doc_parser_agent(self) -> Agent:
         return Agent(
             config=self.agents_config['doc_parser_agent'],
+            llm = LLM(
+                model = "openai/deepseek-chat",
+                max_tokens = 8192,
+                temperature = 0.1
+            ),
             verbose=True,
             # 提示：这里未来需要加读取文件的工具，例如：
             tools=[DocumentParserTool()] 

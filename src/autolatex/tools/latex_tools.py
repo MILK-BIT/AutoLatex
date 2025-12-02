@@ -105,20 +105,33 @@ class LaTeXCompilerTool(BaseTool):
             pdf_filename = "main.pdf"
             pdf_full_path = os.path.join(work_dir, pdf_filename)
             
-            if result.returncode == 0 and os.path.exists(pdf_full_path):
-                # 编译成功！
-                # 我们可以把 PDF 复制到项目的 output 目录，方便查看
-                project_output_dir = OUTPUT_FILE
+            # ================= 修改开始 =================
+            # 8. 检查结果 (宽容模式)
+            pdf_filename = "main.pdf"
+            pdf_full_path = os.path.join(work_dir, pdf_filename)
+            
+            # 只要文件存在，就认为成功，忽略 returncode
+            if os.path.exists(pdf_full_path):
+                # 确保输出目录存在
+                project_output_dir = project_root / "output"
                 os.makedirs(project_output_dir, exist_ok=True)
-                final_pdf_path = os.path.join(project_output_dir, f"result_{job_id}.pdf")
+                
+                final_pdf_path = project_output_dir / f"result_{job_id}.pdf"
                 shutil.copy(pdf_full_path, final_pdf_path)
                 
-                return f"SUCCESS: 编译成功！PDF 已保存至: {final_pdf_path}"
+                status_msg = f"SUCCESS: PDF 已生成并保存至: {final_pdf_path}"
+                
+                # 如果 returncode 不为 0，加个警告提示给 Agent
+                if result.returncode != 0:
+                    status_msg += f"\n(Warning: 编译过程有非致命错误，返回码 {result.returncode}，请检查 PDF 内容)"
+                
+                return status_msg
             else:
-                # 编译失败，截取最后 20 行日志
+                # 真的没生成 PDF 才是失败
                 logs = result.stdout.splitlines()[-20:]
                 log_str = "\n".join(logs)
-                return f"COMPILATION FAILED.\nReturn Code: {result.returncode}\nError Logs:\n...{log_str}"
+                return f"COMPILATION FAILED (No PDF generated).\nReturn Code: {result.returncode}\nError Logs:\n...{log_str}"
+            # ================= 修改结束 =================
 
         except Exception as e:
             return f"System Error during compilation: {str(e)}"

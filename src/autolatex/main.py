@@ -20,7 +20,7 @@ def run():
     inputs = {
         'topic': '自动将word、txt、markdown格式论文转化为Latex格式论文',
         'current_year': str(datetime.now().year),
-        'file_path': r'test_data\docx_samples\sample_paper_full.docx',
+        'file_path': r'data\uploads\英文版稿子红字方便对应找参考文献2.docx',
         'journal_name':'IEEE_Access_LaTeX_template',
         
     }
@@ -95,3 +95,6 @@ def run_with_trigger():
         return result
     except Exception as e:
         raise Exception(f"An error occurred while running the crew with trigger: {e}")
+
+if __name__ == "__main__":
+    run()
