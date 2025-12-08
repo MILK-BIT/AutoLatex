@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional
 
 from docx import Document  # type: ignore
 from docx.document import Document as DocxDocument  # type: ignore
+from docx.oxml.ns import qn  # type: ignore
 from docx.oxml.table import CT_Tbl  # type: ignore
 from docx.oxml.text.paragraph import CT_P  # type: ignore
 from docx.table import _Cell, Table  # type: ignore
@@ -29,7 +30,19 @@ def _ensure_dir(path: str) -> None:
 def _save_image(image_part) -> str:
     """保存 Word 图片并返回相对路径。"""
     _ensure_dir(IMAGES_DIR)
-    image_name = f"{uuid.uuid4()}{image_part.ext}"
+    
+    # 根据 content_type 确定扩展名
+    ext_map = {
+        "image/png": ".png",
+        "image/jpeg": ".jpg",
+        "image/jpg": ".jpg",
+        "image/gif": ".gif",
+        "image/bmp": ".bmp",
+        "image/tiff": ".tiff",
+    }
+    ext = ext_map.get(image_part.content_type, ".png")
+    
+    image_name = f"{uuid.uuid4()}{ext}"
     image_path = os.path.join(IMAGES_DIR, image_name)
     with open(image_path, "wb") as image_file:
         image_file.write(image_part.blob)
@@ -74,21 +87,70 @@ def _get_list_info(para: Paragraph) -> Optional[Dict[str, Any]]:
     return None
 
 
+def _detect_manual_list_item(text: str) -> Optional[Dict[str, Any]]:
+    """检测手动编号的列表项（非Word列表功能）。
+    支持格式: (1), (2), 1., 2., 1), 2), a), b) 等
+    返回: {"number": str, "text": str, "format": str} 或 None
+    """
+    # 匹配模式: 行首的编号
+    patterns = [
+        (r"^\((\d+)\)\s+(.+)$", "parenthesis"),  # (1) text
+        (r"^(\d+)\.\s+(.+)$", "dot"),              # 1. text
+        (r"^(\d+)\)\s+(.+)$", "right_paren"),      # 1) text
+        (r"^([a-z])\)\s+(.+)$", "letter"),         # a) text
+        (r"^([ivxIVX]+)\.\s+(.+)$", "roman"),      # i. text (罗马数字)
+    ]
+    
+    for pattern, fmt in patterns:
+        match = re.match(pattern, text, re.DOTALL)
+        if match:
+            return {
+                "number": match.group(1),
+                "text": match.group(2).strip(),
+                "format": fmt
+            }
+    return None
+
+
 def _extract_images_from_paragraph(para: Paragraph) -> List[Dict[str, Any]]:
-    """从段落的 runs 中提取图片。"""
+    """从段落的 runs 中提取图片。使用 a:blip 和 r:embed 精确定位。"""
     images = []
     try:
         for run in para.runs:
-            # 检查 run 中是否包含 drawing 元素
-            drawing_elems = run._r.xpath('.//w:drawing')
-            if not drawing_elems:
+            # 使用 local-name() XPath 查询 (python-docx 不支持 namespaces 参数)
+            # a:blip 是 DrawingML 中引用图片的地方
+            blip_elems = run._r.xpath('.//*[local-name()="blip"]')
+            
+            # 也要考虑 VML (v:imagedata) - 旧版 Word 兼容
+            vml_elems = run._r.xpath('.//*[local-name()="imagedata"]')
+            
+            embed_ids = []
+            for elem in blip_elems:
+                # r:embed 属性指向图片的 relationship ID
+                rid = elem.get(qn('r:embed'))
+                if rid:
+                    embed_ids.append(rid)
+            for elem in vml_elems:
+                rid = elem.get(qn('r:id'))
+                if rid:
+                    embed_ids.append(rid)
+                
+            # 去重
+            embed_ids = list(set(embed_ids))
+
+            if not embed_ids:
                 continue
-            # 从 run.part.related_parts 中找到 image_part
-            for rel_id, rel_part in run.part.related_parts.items():
-                content_type = getattr(rel_part, "content_type", "")
-                if content_type.startswith("image/"):
-                    path = _save_image(rel_part)
-                    images.append({"type": "image", "path": path, "caption": ""})
+
+            # 通过 relationship ID 获取图片 part
+            for rid in embed_ids:
+                try:
+                    part = para.part.related_parts[rid]
+                    if hasattr(part, "content_type") and part.content_type.startswith("image/"):
+                        path = _save_image(part)
+                        if path:
+                            images.append({"type": "image", "path": path, "caption": ""})
+                except KeyError:
+                    continue
     except Exception:
         pass
     return images
@@ -200,16 +262,28 @@ def _parse_metadata(document: DocxDocument) -> Dict[str, Any]:
             if content:
                 abstract_lines.append(content)
             continue
-        if lower_text.startswith("keywords") or lower_text.startswith("关键词"):
-            collecting_keywords = True
-            collecting_abstract = False
-            keyword_part = text.split(":", 1)[-1]
+        # 支持更多关键词格式: Keywords, Index Terms, Key words等
+        if lower_text.startswith(("keywords", "关键词", "index terms", "key words")):
+            # 修复：只处理当前段落，不读取后续内容
+            # 尝试多种分隔符: : - —
+            keyword_part = ""
+            for sep in [":", "-", "—"]:
+                if sep in text:
+                    keyword_part = text.split(sep, 1)[-1].strip()
+                    break
+            if not keyword_part:
+                keyword_part = text
+            # 移除可能的行尾标点
+            if keyword_part.endswith('.'):
+                keyword_part = keyword_part[:-1]
             keywords.extend([k.strip() for k in re.split(r"[;,，；]", keyword_part) if k.strip()])
-            continue
+            # 关键词提取完成后立即终止循环
+            break
         if collecting_abstract:
             abstract_lines.append(text)
             continue
         if collecting_keywords:
+            # 这个分支现在不应该执行，因为关键词在同一段落内完成
             if not text or len(text.split()) > 12:
                 collecting_keywords = False
                 keywords_section_consumed = True
@@ -317,6 +391,26 @@ def _pop_caption_candidate(content_list: List[Dict[str, Any]]) -> str:
     return ""
 
 
+def _find_caption_for_figure_or_table(content_list: List[Dict[str, Any]], search_ahead: int = 3) -> str:
+    """查找图表的标题，支持向前和向后搜索。
+    
+    Args:
+        content_list: 当前内容列表
+        search_ahead: 向后搜索的段落数量
+    
+    Returns:
+        找到的标题文本，如果没有则返回空字符串
+    """
+    # 先尝试向前查找（原有逻辑）
+    caption = _pop_caption_candidate(content_list)
+    if caption:
+        return caption
+    
+    # 如果向前没找到，标记需要向后查找
+    # 这个功能需要在主循环中配合实现
+    return ""
+
+
 def parse_docx_to_json(file_path: str) -> Dict[str, Any]:
     document = Document(file_path)
     parsed_data: Dict[str, Any] = {
@@ -345,6 +439,15 @@ def parse_docx_to_json(file_path: str) -> Dict[str, Any]:
 
     for block in _iter_block_items(document):
         if isinstance(block, Paragraph):
+            # 先检测图片(图片段落可能文本为空)
+            images = _extract_images_from_paragraph(block)
+            if images:
+                for img in images:
+                    caption_text = _pop_caption_candidate(parsed_data["content"])
+                    if caption_text:
+                        img["caption"] = caption_text
+                    parsed_data["content"].append(img)
+            
             text = block.text.strip()
             if not text:
                 continue
@@ -374,7 +477,7 @@ def parse_docx_to_json(file_path: str) -> Dict[str, Any]:
                 )
                 continue
 
-            # 检测列表
+            # 检测列表（Word原生列表）
             list_info = _get_list_info(block)
             if list_info:
                 num_id = list_info["num_id"]
@@ -385,21 +488,24 @@ def parse_docx_to_json(file_path: str) -> Dict[str, Any]:
                 current_list_num_id = num_id
                 current_list_items.append({"text": text, "level": level})
                 continue
+            
+            # 检测手动编号列表（非Word列表功能）
+            manual_list_item = _detect_manual_list_item(text)
+            if manual_list_item:
+                # 使用特殊的num_id标识手动列表（负数）
+                manual_num_id = -1  # 所有手动列表共享一个ID
+                if current_list_num_id is not None and current_list_num_id != manual_num_id:
+                    flush_list()
+                current_list_num_id = manual_num_id
+                current_list_items.append({
+                    "text": manual_list_item["text"], 
+                    "level": 0,
+                    "number": manual_list_item["number"]
+                })
+                continue
             else:
                 # 非列表段落，先 flush 列表
                 flush_list()
-
-            # 检测图片
-            images = _extract_images_from_paragraph(block)
-            if images:
-                for img in images:
-                    caption_text = _pop_caption_candidate(parsed_data["content"])
-                    if caption_text:
-                        img["caption"] = caption_text
-                    parsed_data["content"].append(img)
-                # 如果段落中除了图片还有文本，继续处理
-                if not text:
-                    continue
 
             # 普通段落处理
             content_entry = _paragraph_to_content(block)
