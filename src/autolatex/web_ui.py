@@ -456,6 +456,45 @@ button.translate-button {
     color: white !important;
 }
 
+button.delete-button {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+    border: none !important;
+    color: white !important;
+    padding: 10px 20px !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    white-space: nowrap;
+    transition: transform 0.2s, box-shadow 0.2s;
+    margin-top: 1px;
+}
+
+button.delete-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+.delete-button-container {
+    text-align: center;
+    margin-top: 8px;
+}
+
+/* 删除按钮行样式 - 减少间距 */
+.delete-button-row {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+.delete-button-row > div {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
 /* 展开侧边栏按钮（当侧边栏隐藏时显示） */
 .expand-sidebar-btn {
     position: fixed;
@@ -481,6 +520,52 @@ button.translate-button {
 .expand-sidebar-btn:hover {
     background: #f9fafb;
     color: #8b5cf6;
+}
+
+/* 处理结果输出框可拖拽缩放样式 */
+.resizable-output {
+    position: relative;
+}
+
+.resizable-output textarea {
+    resize: both;
+    min-height: 42px;  /* 约等于单行高度，便于收缩到最小 */
+    max-height: 70vh;
+    min-width: 320px;
+    padding: 14px 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    font-family: "Fira Code", "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    line-height: 1.5;
+}
+
+.resizable-output textarea:focus {
+    outline: none;
+    border-color: #8b5cf6;
+    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.25);
+}
+
+/* 下载链接样式 */
+.download-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+    color: #ffffff;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.2s;
+}
+
+.download-link:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(34, 197, 94, 0.35);
+    opacity: 0.95;
 }
 """
 
@@ -572,12 +657,24 @@ def process_file(file, journal_type):
     print("[Web UI] process_file 被调用")  # 调试日志
     if file is None:
         print("[Web UI] 未选择文件")
-        return "请先上传论文文件"
+        return "请先上传论文文件", gr.update(visible=False, value=None)
 
     # 1. 调用后端 /api/v1/paper/upload 接口上传文件
     api_base = os.environ.get("AUTOLATEX_API_BASE", "http://127.0.0.1:8000")
     upload_url = f"{api_base}/api/v1/paper/upload"
     convert_url = f"{api_base}/api/v1/paper/convert"
+
+    def build_download_link(pdf_url, pdf_name=None):
+        """生成下载链接的 HTML 更新对象"""
+        if not pdf_url:
+            return gr.update(visible=False, value=None)
+        full_url = pdf_url if str(pdf_url).startswith("http") else f"{api_base.rstrip('/')}{pdf_url}"
+        display_name = pdf_name or "生成结果.pdf"
+        html = (
+            f'<a class="download-link" href="{full_url}" target="_blank" '
+            f'download="{display_name}">⬇️ 下载PDF（{display_name}）</a>'
+        )
+        return gr.update(value=html, visible=True)
 
     try:
         # Gradio `file` 为一个带临时路径的对象，file.name 为临时文件路径
@@ -591,18 +688,18 @@ def process_file(file, journal_type):
 
         if resp.status_code != 200:
             print(f"[Web UI] 上传接口 HTTP {resp.status_code}: {resp.text}")
-            return f"❌ 调用上传接口失败，HTTP {resp.status_code}: {resp.text}"
+            return f"❌ 调用上传接口失败，HTTP {resp.status_code}: {resp.text}", gr.update(visible=False, value=None)
 
         data = resp.json()
         print(f"[Web UI] 上传接口返回: {data}")
         if not data.get("success"):
-            return f"❌ 上传接口返回失败: {data.get('message') or data}"
+            return f"❌ 上传接口返回失败: {data.get('message') or data}", gr.update(visible=False, value=None)
 
         file_path = data.get("file_path")
         filename = data.get("filename", orig_name)
     except Exception as e:
         print(f"[Web UI] 通过 REST API 上传文件失败: {e}")
-        return f"❌ 通过 REST API 上传文件失败: {str(e)}"
+        return f"❌ 通过 REST API 上传文件失败: {str(e)}", gr.update(visible=False, value=None)
 
     # 2. 调用 /api/v1/paper/convert 进行论文转换
     try:
@@ -619,7 +716,8 @@ def process_file(file, journal_type):
                 "✅ 文件上传成功，但转换接口调用失败。\n"
                 f"文件名: {filename}\n"
                 f"后端保存路径: {file_path}\n\n"
-                f"调用 /api/v1/paper/convert 失败，HTTP {resp_conv.status_code}: {resp_conv.text}"
+                f"调用 /api/v1/paper/convert 失败，HTTP {resp_conv.status_code}: {resp_conv.text}",
+                gr.update(visible=False, value=None),
             )
 
         conv_data = resp_conv.json()
@@ -630,18 +728,23 @@ def process_file(file, journal_type):
                 f"文件名: {filename}\n"
                 f"后端保存路径: {file_path}\n\n"
                 f"转换消息: {conv_data.get('message')}\n"
-                f"错误信息: {conv_data.get('error')}"
+                f"错误信息: {conv_data.get('error')}",
+                gr.update(visible=False, value=None),
             )
 
         output_path = conv_data.get("output_path")
         message = conv_data.get("message", "论文转换成功")
+        pdf_url = conv_data.get("pdf_url")
+        pdf_name = conv_data.get("pdf_filename")
+        download_update = build_download_link(pdf_url, pdf_name)
 
         return (
             f"✅ 论文文件已通过 REST API 上传并转换成功。\n"
             f"文件名: {filename}\n"
             f"上传保存路径: {file_path}\n\n"
             f"转换结果: {message}\n"
-            f"LaTeX 输出路径: {output_path}"
+            f"LaTeX 输出路径: {output_path}",
+            download_update,
         )
     except Exception as e:
         print(f"[Web UI] 调用转换接口异常: {e}")
@@ -649,7 +752,8 @@ def process_file(file, journal_type):
             "✅ 文件上传成功，但在调用转换接口时发生异常。\n"
             f"文件名: {filename}\n"
             f"后端保存路径: {file_path}\n\n"
-            f"异常信息: {str(e)}"
+            f"异常信息: {str(e)}",
+            gr.update(visible=False, value=None),
         )
 
 # JavaScript 代码用于布局调整
@@ -948,15 +1052,27 @@ def create_interface():
                         elem_classes=["hide-gradio-default"]
                     )
                     
-                    # 自定义上传按钮（居中显示）
-                    with gr.Row():
-                        gr.HTML('<div style="flex: 1;"></div>')
-                        upload_btn = gr.Button(
-                            "上传论文文件 ↑",
-                            elem_classes=["upload-button"],
-                            scale=0
-                        )
-                        gr.HTML('<div style="flex: 1;"></div>')
+                    # 自定义上传按钮和删除按钮（居中显示）
+                    with gr.Column():
+                        with gr.Row():
+                            gr.HTML('<div style="flex: 1;"></div>')
+                            upload_btn = gr.Button(
+                                "上传论文文件 ↑",
+                                elem_classes=["upload-button"],
+                                scale=0
+                            )
+                            gr.HTML('<div style="flex: 1;"></div>')
+                        
+                        # 删除按钮容器（初始隐藏，紧贴上传按钮）
+                        with gr.Row(elem_classes=["delete-button-row"]):
+                            gr.HTML('<div style="flex: 1;"></div>')
+                            delete_btn = gr.Button(
+                                "删除文件 ✕",
+                                elem_classes=["delete-button"],
+                                scale=0,
+                                visible=False
+                            )
+                            gr.HTML('<div style="flex: 1;"></div>')
                     
                     gr.HTML("""
                     <div class="file-info">
@@ -1005,7 +1121,13 @@ def create_interface():
                 output = gr.Textbox(
                     label="处理结果",
                     visible=True,   # 默认显示，便于直接看到上传/转换结果
-                    interactive=False
+                    interactive=False,
+                    elem_classes=["resizable-output"]
+                )
+                
+                download_link = gr.HTML(
+                    value="",
+                    visible=False
                 )
                 
                 # 绑定事件
@@ -1019,6 +1141,42 @@ def create_interface():
                     js="() => { const fileInput = document.querySelector('input[type=file]'); if(fileInput) fileInput.click(); }"
                 )
                 
+                # 文件上传/删除处理函数
+                def handle_file_change(file):
+                    """处理文件变化：显示/隐藏删除按钮，更新输出信息"""
+                    if file is not None:
+                        return (
+                            gr.update(visible=True),  # 显示删除按钮
+                            f"文件已上传: {os.path.basename(file.name)}"
+                        )
+                    else:
+                        return (
+                            gr.update(visible=False),  # 隐藏删除按钮
+                            "请上传文件"
+                        )
+                
+                def delete_file():
+                    """删除文件：清除文件选择并隐藏删除按钮"""
+                    return (
+                        None,  # 清除文件
+                        gr.update(visible=False),  # 隐藏删除按钮
+                        "文件已删除，请重新上传文件"
+                    )
+                
+                # 文件上传变化事件
+                file_upload.change(
+                    fn=handle_file_change,
+                    inputs=[file_upload],
+                    outputs=[delete_btn, output]
+                )
+                
+                # 删除按钮点击事件
+                delete_btn.click(
+                    fn=delete_file,
+                    inputs=[],
+                    outputs=[file_upload, delete_btn, output]
+                )
+                
                 # 预览模板按钮事件
                 def show_template_preview(template_name):
                     preview_content = preview_template(template_name)
@@ -1030,16 +1188,27 @@ def create_interface():
                     outputs=[template_preview]
                 )
                 
+                # 生成按钮状态切换：点击后显示“正在生成中”，完成后恢复
+                def set_generating_state():
+                    return gr.update(value="正在生成中", interactive=False)
+
+                def reset_generate_state():
+                    return gr.update(value="生成LaTeX 📦", interactive=True)
+
                 generate_btn.click(
+                    fn=set_generating_state,
+                    inputs=[],
+                    outputs=[generate_btn],
+                    queue=False,
+                ).then(
                     fn=process_file,
                     inputs=[file_upload, journal_dropdown],
-                    outputs=[output]
-                )
-                
-                file_upload.change(
-                    fn=lambda f: f"文件已上传: {f.name}" if f else "请上传文件",
-                    inputs=[file_upload],
-                    outputs=[output]
+                    outputs=[output, download_link],
+                ).then(
+                    fn=reset_generate_state,
+                    inputs=[],
+                    outputs=[generate_btn],
+                    queue=False,
                 )
     
     return app
