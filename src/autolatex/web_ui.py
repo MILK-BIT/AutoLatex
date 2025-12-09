@@ -456,6 +456,45 @@ button.translate-button {
     color: white !important;
 }
 
+button.delete-button {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+    border: none !important;
+    color: white !important;
+    padding: 10px 20px !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    white-space: nowrap;
+    transition: transform 0.2s, box-shadow 0.2s;
+    margin-top: 1px;
+}
+
+button.delete-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+.delete-button-container {
+    text-align: center;
+    margin-top: 8px;
+}
+
+/* 删除按钮行样式 - 减少间距 */
+.delete-button-row {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+.delete-button-row > div {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
 /* 展开侧边栏按钮（当侧边栏隐藏时显示） */
 .expand-sidebar-btn {
     position: fixed;
@@ -948,15 +987,27 @@ def create_interface():
                         elem_classes=["hide-gradio-default"]
                     )
                     
-                    # 自定义上传按钮（居中显示）
-                    with gr.Row():
-                        gr.HTML('<div style="flex: 1;"></div>')
-                        upload_btn = gr.Button(
-                            "上传论文文件 ↑",
-                            elem_classes=["upload-button"],
-                            scale=0
-                        )
-                        gr.HTML('<div style="flex: 1;"></div>')
+                    # 自定义上传按钮和删除按钮（居中显示）
+                    with gr.Column():
+                        with gr.Row():
+                            gr.HTML('<div style="flex: 1;"></div>')
+                            upload_btn = gr.Button(
+                                "上传论文文件 ↑",
+                                elem_classes=["upload-button"],
+                                scale=0
+                            )
+                            gr.HTML('<div style="flex: 1;"></div>')
+                        
+                        # 删除按钮容器（初始隐藏，紧贴上传按钮）
+                        with gr.Row(elem_classes=["delete-button-row"]):
+                            gr.HTML('<div style="flex: 1;"></div>')
+                            delete_btn = gr.Button(
+                                "删除文件 ✕",
+                                elem_classes=["delete-button"],
+                                scale=0,
+                                visible=False
+                            )
+                            gr.HTML('<div style="flex: 1;"></div>')
                     
                     gr.HTML("""
                     <div class="file-info">
@@ -1019,6 +1070,42 @@ def create_interface():
                     js="() => { const fileInput = document.querySelector('input[type=file]'); if(fileInput) fileInput.click(); }"
                 )
                 
+                # 文件上传/删除处理函数
+                def handle_file_change(file):
+                    """处理文件变化：显示/隐藏删除按钮，更新输出信息"""
+                    if file is not None:
+                        return (
+                            gr.update(visible=True),  # 显示删除按钮
+                            f"文件已上传: {os.path.basename(file.name)}"
+                        )
+                    else:
+                        return (
+                            gr.update(visible=False),  # 隐藏删除按钮
+                            "请上传文件"
+                        )
+                
+                def delete_file():
+                    """删除文件：清除文件选择并隐藏删除按钮"""
+                    return (
+                        None,  # 清除文件
+                        gr.update(visible=False),  # 隐藏删除按钮
+                        "文件已删除，请重新上传文件"
+                    )
+                
+                # 文件上传变化事件
+                file_upload.change(
+                    fn=handle_file_change,
+                    inputs=[file_upload],
+                    outputs=[delete_btn, output]
+                )
+                
+                # 删除按钮点击事件
+                delete_btn.click(
+                    fn=delete_file,
+                    inputs=[],
+                    outputs=[file_upload, delete_btn, output]
+                )
+                
                 # 预览模板按钮事件
                 def show_template_preview(template_name):
                     preview_content = preview_template(template_name)
@@ -1033,12 +1120,6 @@ def create_interface():
                 generate_btn.click(
                     fn=process_file,
                     inputs=[file_upload, journal_dropdown],
-                    outputs=[output]
-                )
-                
-                file_upload.change(
-                    fn=lambda f: f"文件已上传: {f.name}" if f else "请上传文件",
-                    inputs=[file_upload],
                     outputs=[output]
                 )
     
