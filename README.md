@@ -18,6 +18,8 @@ autolatex/
 ├── 模板/ -- 目前存放的是一些BIT毕业论文模版
 ├── test_data/ -- hbk同学创建的用来测试的word、txt、markdown文件
 ├── vendor/ --有个deepseek-OCR的文件
+├── checkpoints/mixtex_lora_10k_final_tuned --微调模型
+├── scripts/ --模型训练和评估的代码
 └── src/
     └── autolatex/
         ├── __init__.py
