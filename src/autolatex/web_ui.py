@@ -20,6 +20,7 @@ if str(src_dir) not in sys.path:
 # 导入模板工具
 from autolatex.tools.template_manager import list_available_journals
 from autolatex.tools.template_tools import TemplateRetrievalTool
+from autolatex.tools.knowledge_base import initialize_knowledge_base, get_all_journal_names
 
 # 自定义 CSS 样式
 custom_css = """
@@ -626,15 +627,52 @@ title_html = """
 """
 
 def get_available_templates():
-    """获取所有可用的模板列表"""
+    """从向量数据库获取所有可用的模板列表"""
     try:
-        templates = list_available_journals()
-        if templates:
+        # 从向量数据库获取所有期刊名称
+        db = initialize_knowledge_base()
+        
+        # 获取所有文档及其元数据
+        all_results = db.collection.get()
+        
+        if all_results and all_results.get('metadatas'):
+            # 从元数据中提取 journal_name
+            journal_names = set()
+            for metadata in all_results.get('metadatas', []):
+                if metadata and 'journal_name' in metadata:
+                    journal_name = metadata['journal_name']
+                    if journal_name:
+                        journal_names.add(journal_name)
+            
+            # 转换为列表并排序（英文在前，中文在后）
+            templates = sorted(journal_names, key=lambda x: (not x.isascii(), x))
+            
+            # 添加"自定义模板"选项
+            templates.append("自定义模板")
+            
+            if templates:
+                return templates
+        
+        # 如果向量数据库为空或获取失败，尝试使用备用方法
+        try:
+            templates = get_all_journal_names()
+            templates.append("自定义模板")
             return templates
+        except Exception:
+            pass
+        
+        # 最后的备用方案：返回默认列表
         return ["IEEE Transactions", "ACM Conference", "Springer LNCS", "Elsevier Article", "Nature", "Science", "自定义模板"]
     except Exception as e:
         # 如果获取失败，返回默认列表
-        return ["IEEE Transactions", "ACM Conference", "Springer LNCS", "Elsevier Article", "Nature", "Science", "自定义模板"]
+        print(f"[Web UI] 从向量数据库获取模板列表失败: {e}")
+        try:
+            # 尝试使用备用方法
+            templates = get_all_journal_names()
+            templates.append("自定义模板")
+            return templates
+        except Exception:
+            return ["IEEE Transactions", "ACM Conference", "Springer LNCS", "Elsevier Article", "Nature", "Science", "自定义模板"]
 
 def preview_template(template_name: str) -> str:
     """预览模板内容"""
