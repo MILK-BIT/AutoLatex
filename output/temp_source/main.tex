@@ -1,0 +1,41 @@
+% Simplified main.tex for compilation test
+\documentclass[10pt,twocolumn,letterpaper]{article}
+
+% Basic packages
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{natbib}
+
+% Metadata
+\title{AutoTeX Research Paper}
+\author{
+Alice Zhang \\
+Tsinghua University \\
+{\tt\small }
+\and
+Bob Li \\
+MIT \\
+{\tt\small }
+\and
+Carol Chen \\
+HKUST \\
+{\tt\small }
+}
+
+\begin{document}
+
+\maketitle
+
+% Section inputs
+\input{sec/0_abstract}
+\input{sec/1_intro}
+
+% Bibliography
+{
+    \small
+    \bibliographystyle{plainnat}
+    \bibliography{main}
+}
+
+\end{document}
