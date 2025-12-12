@@ -64,6 +64,103 @@ Jr}.\\authorrefmark{3},
             "key_packages": "ieeeaccess, cite, amsmath, amssymb, amsfonts, algorithmic, graphicx, textcomp",
             "template_dir_path": "IEEE_Access_LaTeX_template"
         }
+    },
+    {
+        "journal": "CVPR 2026",
+        "document": """
+% CVPR 2026 Paper Template; see https://github.com/cvpr-org/author-kit
+
+\\documentclass[10pt,twocolumn,letterpaper]{article}
+
+%%%%%%%%% PAPER TYPE
+
+% \\usepackage{cvpr}              % Camera-ready
+
+\\usepackage[review]{cvpr}        % Review version
+
+% \\usepackage[pagenumbers]{cvpr} % Page numbers for arXiv
+
+% Additional packages (edit in preamble.tex)
+
+\\input{preamble}
+
+% Hyperref
+
+\\definecolor{cvprblue}{rgb}{0.21,0.49,0.74}
+
+\\usepackage[pagebackref,breaklinks,colorlinks,allcolors=cvprblue]{hyperref}
+
+%%%%%%%%% PAPER METADATA
+
+\\def\\paperID{*****}
+
+\\def\\confName{CVPR}
+
+\\def\\confYear{2026}
+
+%%%%%%%%% TITLE
+
+\\title{<TITLE>}
+
+%%%%%%%%% AUTHORS
+
+\\author{
+
+<AUTHOR 1 NAME> \\\\
+
+<INSTITUTION 1> \\\\
+
+{\\tt\\small <EMAIL 1>}
+
+\\and
+
+<AUTHOR 2 NAME> \\\\
+
+<INSTITUTION 2> \\\\
+
+{\\tt\\small <EMAIL 2>}
+
+}
+
+\\begin{document}
+
+\\maketitle
+
+%%%%%%%%% SECTION INPUTS
+
+\\input{sec/0_abstract}
+
+\\input{sec/1_intro}
+
+\\input{sec/2_formatting}
+
+\\input{sec/3_finalcopy}
+
+%%%%%%%%% BIBLIOGRAPHY
+
+{
+
+    \\small
+
+    \\bibliographystyle{ieeenat_fullname}
+
+    \\bibliography{main}
+
+}
+
+%%%%%%%%% SUPPLEMENTARY (optional)
+
+% \\input{sec/X_suppl}
+
+\\end{document}
+""",
+        "metadata": {
+            "journal_name": "CVPR_2026",
+            "template_type": "conference",
+            "documentclass": "article",
+            "key_packages": "cvpr, hyperref, preamble, xcolor",
+            "template_dir_path": "CVPR_2026"
+        }
     }
 ]
 
