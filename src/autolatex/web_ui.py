@@ -573,20 +573,59 @@ button.delete-button:hover {
 /* 图片上传区域样式 */
 .image-upload-card {
     background: #ffffff;
-    border-radius: 16px;
-    padding: 30px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-    margin-top: 20px;
+    border-radius: 12px;
+    padding: 15px 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    margin-top: 15px;
 }
 
 .image-upload-title {
-    font-size: 18px;
+    font-size: 15px;
     font-weight: 600;
     color: #1f2937;
-    margin-bottom: 15px;
+    margin-bottom: 0;
     display: flex;
     align-items: center;
     gap: 8px;
+    cursor: pointer;
+    user-select: none;
+    padding: 8px 10px;
+    border-radius: 6px;
+    transition: background 0.2s;
+}
+
+.image-upload-title:hover {
+    background: #f9fafb;
+}
+
+.expand-collapse-icon {
+    margin-left: auto;
+    font-size: 16px;
+    color: #6b7280;
+    transition: transform 0.3s ease, color 0.2s;
+    font-weight: normal;
+}
+
+.image-upload-title:hover .expand-collapse-icon {
+    color: #8b5cf6;
+}
+
+.expand-collapse-icon.collapsed {
+    transform: rotate(-90deg);
+}
+
+#image-upload-content {
+    transition: opacity 0.3s ease, max-height 0.3s ease;
+    overflow: hidden;
+}
+
+.image-upload-content-collapsed {
+    display: none !important;
+}
+
+.image-upload-content-expanded {
+    display: block !important;
+    opacity: 1 !important;
 }
 
 .image-upload-button {
@@ -615,29 +654,58 @@ button.delete-button:hover {
 /* 图片画廊样式 */
 .image-gallery-container {
     margin-top: 20px;
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: #8b5cf6 #f5f5f5;
+}
+
+.image-gallery-container::-webkit-scrollbar {
+    height: 8px;
+}
+
+.image-gallery-container::-webkit-scrollbar-track {
+    background: #f5f5f5;
+    border-radius: 4px;
+}
+
+.image-gallery-container::-webkit-scrollbar-thumb {
+    background: #8b5cf6;
+    border-radius: 4px;
+}
+
+.image-gallery-container::-webkit-scrollbar-thumb:hover {
+    background: #7c3aed;
 }
 
 .image-item-wrapper {
     position: relative;
     display: inline-block;
-    margin: 10px;
-    border-radius: 8px;
+    flex-shrink: 0;
+    margin: 8px;
+    margin-right: 12px;
+    border-radius: 6px;
     overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
     transition: transform 0.2s, box-shadow 0.2s;
+    vertical-align: top;
+    width: 120px;
+    height: 120px;
 }
 
 .image-item-wrapper:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.12);
 }
 
 .image-delete-btn {
     position: absolute;
-    top: 8px;
-    right: 8px;
-    width: 28px;
-    height: 28px;
+    top: 4px;
+    right: 4px;
+    width: 22px;
+    height: 22px;
     background: rgba(239, 68, 68, 0.9);
     color: white;
     border: none;
@@ -646,24 +714,26 @@ button.delete-button:hover {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 16px;
+    font-size: 12px;
     font-weight: bold;
     z-index: 10;
     transition: all 0.2s;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 .image-delete-btn:hover {
     background: rgba(220, 38, 38, 1);
     transform: scale(1.1);
-    box-shadow: 0 4px 10px rgba(239, 68, 68, 0.4);
+    box-shadow: 0 3px 8px rgba(239, 68, 68, 0.4);
 }
 
 .image-item-wrapper img {
     display: block;
-    max-width: 200px;
-    max-height: 200px;
+    width: 120px;
+    height: 120px;
     object-fit: contain;
+    background: #f9fafb;
+    padding: 4px;
 }
 
 .empty-gallery-message {
@@ -1178,6 +1248,92 @@ window.showSidebar = function() {
     setTimeout(setupSidebarToggle, 2000);
     setInterval(setupSidebarToggle, 3000);
     
+    // 图片上传区域展开/收起功能
+    function setupImageUploadToggle() {
+        const toggleBtn = document.getElementById('image-upload-toggle');
+        const uploadContent = document.getElementById('image-upload-content');
+        
+        if (toggleBtn && uploadContent && !toggleBtn.dataset.listenerAttached) {
+            toggleBtn.dataset.listenerAttached = 'true';
+            
+            // 检查初始状态（默认收起）
+            let isExpanded = uploadContent.classList.contains('image-upload-content-expanded');
+            
+            // 确保初始状态正确
+            if (!isExpanded) {
+                uploadContent.style.display = 'none';
+                uploadContent.style.opacity = '0';
+                toggleBtn.textContent = '▼';
+                toggleBtn.classList.add('collapsed');
+            }
+            
+            function toggleImageUpload() {
+                isExpanded = !isExpanded;
+                
+                if (isExpanded) {
+                    // 展开
+                    uploadContent.style.display = 'block';
+                    uploadContent.classList.remove('image-upload-content-collapsed');
+                    uploadContent.classList.add('image-upload-content-expanded');
+                    // 使用 setTimeout 确保 display 先设置，然后设置 opacity
+                    setTimeout(() => {
+                        uploadContent.style.opacity = '1';
+                    }, 10);
+                    toggleBtn.textContent = '▲';
+                    toggleBtn.classList.remove('collapsed');
+                } else {
+                    // 收起
+                    uploadContent.style.opacity = '0';
+                    uploadContent.classList.remove('image-upload-content-expanded');
+                    uploadContent.classList.add('image-upload-content-collapsed');
+                    setTimeout(() => {
+                        if (!isExpanded) {
+                            uploadContent.style.display = 'none';
+                        }
+                    }, 300);
+                    toggleBtn.textContent = '▼';
+                    toggleBtn.classList.add('collapsed');
+                }
+            }
+            
+            toggleBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleImageUpload();
+            });
+            
+            // 标题点击也可以切换
+            const titleElement = document.getElementById('image-upload-title');
+            if (titleElement && !titleElement.dataset.listenerAttached) {
+                titleElement.dataset.listenerAttached = 'true';
+                titleElement.addEventListener('click', function(e) {
+                    // 如果点击的是图标，不重复触发
+                    if (e.target !== toggleBtn && !toggleBtn.contains(e.target)) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        toggleImageUpload();
+                    }
+                });
+            }
+        }
+    }
+    
+    // 设置图片上传展开/收起
+    setupImageUploadToggle();
+    setTimeout(setupImageUploadToggle, 500);
+    setTimeout(setupImageUploadToggle, 1000);
+    setTimeout(setupImageUploadToggle, 2000);
+    
+    // 使用 MutationObserver 监听 DOM 变化，确保在 Gradio 加载后设置
+    const imageUploadObserver = new MutationObserver(function(mutations) {
+        setupImageUploadToggle();
+    });
+    
+    imageUploadObserver.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+    
     // 图片删除功能
     window.deleteImage = function(index) {
         console.log('删除图片，索引:', index);
@@ -1547,56 +1703,59 @@ def create_interface():
                 # 图片上传卡片
                 with gr.Column(elem_classes=["image-upload-card"]):
                     gr.HTML("""
-                    <div class="image-upload-title">
-                        <span>🖼️</span>
-                        <span>上传图片</span>
+                    <div class="image-upload-title" id="image-upload-title">
+                        <span>📐</span>
+                        <span>上传公式</span>
+                        <span class="expand-collapse-icon" id="image-upload-toggle">▼</span>
                     </div>
                     """)
                     
-                    # 图片上传组件（隐藏默认样式）
-                    image_upload = gr.File(
-                        label="",
-                        file_types=["image"],
-                        file_count="multiple",
-                        elem_classes=["hide-gradio-default"]
-                    )
-                    
-                    # 图片上传按钮
-                    with gr.Row():
-                        gr.HTML('<div style="flex: 1;"></div>')
-                        image_upload_btn = gr.Button(
-                            "选择图片 📷",
-                            elem_classes=["image-upload-button"],
-                            scale=0
+                    # 图片上传内容区域（默认隐藏，通过CSS控制）
+                    with gr.Column(visible=True, elem_id="image-upload-content", elem_classes=["image-upload-content-collapsed"]) as image_upload_content:
+                        # 图片上传组件（隐藏默认样式，限制只能上传 JPG）
+                        image_upload = gr.File(
+                            label="",
+                            file_types=[".jpg", ".jpeg"],
+                            file_count="multiple",
+                            elem_classes=["hide-gradio-default"]
                         )
-                        gr.HTML('<div style="flex: 1;"></div>')
-                    
-                    gr.HTML("""
-                    <div class="file-info" style="margin-top: 10px;">
-                        <div>支持格式: JPG, PNG, GIF, WebP</div>
-                        <div>可同时上传多张图片</div>
-                    </div>
-                    """)
-                    
-                    # 图片画廊（使用State存储图片列表）
-                    uploaded_images_state = gr.State(value=[])  # 存储图片路径列表
-                    
-                    # 图片显示区域（使用HTML显示，支持删除按钮）
-                    image_display = gr.HTML(
-                        value='<div class="empty-gallery-message">暂无图片，请上传图片</div>',
-                        elem_id="image-display"
-                    )
-                    
-                    # 隐藏的删除索引输入（用于传递要删除的图片索引）
-                    # 使用CSS隐藏但仍在DOM中，确保JavaScript能找到
-                    delete_image_index = gr.Textbox(
-                        value="",
-                        label="",
-                        visible=True,  # 设置为可见，但通过CSS隐藏
-                        interactive=True,
-                        elem_id="delete-image-index",
-                        elem_classes=["hidden-delete-index"]
-                    )
+                        
+                        # 图片上传按钮
+                        with gr.Row():
+                            gr.HTML('<div style="flex: 1;"></div>')
+                            image_upload_btn = gr.Button(
+                                "选择公式图片 📷",
+                                elem_classes=["image-upload-button"],
+                                scale=0
+                            )
+                            gr.HTML('<div style="flex: 1;"></div>')
+                        
+                        gr.HTML("""
+                        <div class="file-info" style="margin-top: 10px;">
+                            <div>支持格式: JPG (.jpg, .jpeg)</div>
+                            <div>可同时上传多张公式图片，图片将在一行显示</div>
+                        </div>
+                        """)
+                        
+                        # 图片画廊（使用State存储图片列表）
+                        uploaded_images_state = gr.State(value=[])  # 存储图片路径列表
+                        
+                        # 图片显示区域（使用HTML显示，支持删除按钮）
+                        image_display = gr.HTML(
+                            value='<div class="empty-gallery-message">暂无公式图片，请上传</div>',
+                            elem_id="image-display"
+                        )
+                        
+                        # 隐藏的删除索引输入（用于传递要删除的图片索引）
+                        # 使用CSS隐藏但仍在DOM中，确保JavaScript能找到
+                        delete_image_index = gr.Textbox(
+                            value="",
+                            label="",
+                            visible=True,  # 设置为可见，但通过CSS隐藏
+                            interactive=True,
+                            elem_id="delete-image-index",
+                            elem_classes=["hidden-delete-index"]
+                        )
                 
                 # 模板预览区域
                 template_preview = gr.Code(
@@ -1664,11 +1823,12 @@ def create_interface():
                 )
                 
                 def generate_image_html(image_list):
-                    """生成图片显示的HTML，包含删除按钮"""
+                    """生成图片显示的HTML，包含删除按钮，图片在一行显示"""
                     if not image_list or len(image_list) == 0:
-                        return '<div class="empty-gallery-message">暂无图片，请上传图片</div>'
+                        return '<div class="empty-gallery-message">暂无公式图片，请上传</div>'
                     
-                    html_parts = ['<div style="display: flex; flex-wrap: wrap; gap: 15px; margin-top: 10px;">']
+                    # 使用滚动容器，图片在一行显示
+                    html_parts = ['<div class="image-gallery-container" style="display: flex; flex-wrap: nowrap; white-space: nowrap; margin-top: 10px;">']
                     
                     for idx, image_path in enumerate(image_list):
                         # 获取图片文件名用于显示
@@ -1682,14 +1842,11 @@ def create_interface():
                             with open(image_path, 'rb') as f:
                                 image_data = f.read()
                                 image_base64 = base64.b64encode(image_data).decode('utf-8')
-                                # 根据文件扩展名确定MIME类型
+                                # 根据文件扩展名确定MIME类型（只支持 JPG）
                                 ext = os.path.splitext(image_path)[1].lower()
                                 mime_type = {
                                     '.jpg': 'image/jpeg',
-                                    '.jpeg': 'image/jpeg',
-                                    '.png': 'image/png',
-                                    '.gif': 'image/gif',
-                                    '.webp': 'image/webp'
+                                    '.jpeg': 'image/jpeg'
                                 }.get(ext, 'image/jpeg')
                                 
                                 image_src = f"data:{mime_type};base64,{image_base64}"
@@ -1699,7 +1856,7 @@ def create_interface():
                         
                         html_parts.append(f'''
                         <div class="image-item-wrapper" data-image-index="{idx}">
-                            <img src="{image_src}" alt="{image_name}" style="max-width: 200px; max-height: 200px; display: block;" />
+                            <img src="{image_src}" alt="{image_name}" />
                             <button class="image-delete-btn" onclick="window.deleteImage({idx})" title="删除图片">✕</button>
                         </div>
                         ''')
