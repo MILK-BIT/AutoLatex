@@ -4,6 +4,7 @@ import sys
 import shutil
 from pathlib import Path
 import requests
+import base64
 
 # 添加项目根目录到路径，以便支持直接运行和模块导入
 # 计算项目根目录（src/ 的父目录）
@@ -568,6 +569,127 @@ button.delete-button:hover {
     box-shadow: 0 6px 18px rgba(34, 197, 94, 0.35);
     opacity: 0.95;
 }
+
+/* 图片上传区域样式 */
+.image-upload-card {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 30px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    margin-top: 20px;
+}
+
+.image-upload-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.image-upload-button {
+    width: auto !important;
+    min-width: 200px;
+    padding: 10px 20px !important;
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 10px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.image-upload-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+}
+
+/* 图片画廊样式 */
+.image-gallery-container {
+    margin-top: 20px;
+}
+
+.image-item-wrapper {
+    position: relative;
+    display: inline-block;
+    margin: 10px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.image-item-wrapper:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.image-delete-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+    background: rgba(239, 68, 68, 0.9);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: bold;
+    z-index: 10;
+    transition: all 0.2s;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+.image-delete-btn:hover {
+    background: rgba(220, 38, 38, 1);
+    transform: scale(1.1);
+    box-shadow: 0 4px 10px rgba(239, 68, 68, 0.4);
+}
+
+.image-item-wrapper img {
+    display: block;
+    max-width: 200px;
+    max-height: 200px;
+    object-fit: contain;
+}
+
+.empty-gallery-message {
+    text-align: center;
+    color: #6b7280;
+    font-size: 14px;
+    padding: 40px 20px;
+    background: #f9fafb;
+    border-radius: 8px;
+    border: 2px dashed #d1d5db;
+}
+
+/* 隐藏删除索引输入框 */
+.hidden-delete-index,
+.hidden-delete-index * {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    opacity: 0 !important;
+    position: absolute !important;
+    left: -9999px !important;
+}
 """
 
 # HTML 模板
@@ -1055,6 +1177,282 @@ window.showSidebar = function() {
     setTimeout(setupSidebarToggle, 1000);
     setTimeout(setupSidebarToggle, 2000);
     setInterval(setupSidebarToggle, 3000);
+    
+    // 图片删除功能
+    window.deleteImage = function(index) {
+        console.log('删除图片，索引:', index);
+        
+        function findAndUpdateInput() {
+            try {
+                let deleteIndexInput = null;
+                let containerElement = null;
+                
+                // 辅助函数：从容器中提取实际的 input 元素
+                function extractInputFromContainer(container) {
+                    if (!container) return null;
+                    
+                    // 如果容器本身就是 input 或 textarea，直接返回
+                    if (container.tagName === 'INPUT' || container.tagName === 'TEXTAREA') {
+                        return container;
+                    }
+                    
+                    // 在容器内查找 input 或 textarea（使用更广泛的查询）
+                    let input = container.querySelector('input[type="text"]');
+                    if (input) return input;
+                    
+                    input = container.querySelector('input:not([type])');
+                    if (input) return input;
+                    
+                    input = container.querySelector('textarea');
+                    if (input) return input;
+                    
+                    // 查找任何 input 元素
+                    input = container.querySelector('input');
+                    if (input) return input;
+                    
+                    // 如果还是没找到，尝试递归查找子元素
+                    const allInputs = container.querySelectorAll('input, textarea');
+                    for (let inp of allInputs) {
+                        if (inp.tagName === 'INPUT' || inp.tagName === 'TEXTAREA') {
+                            return inp;
+                        }
+                    }
+                    
+                    return null;
+                }
+                
+                // 方法1: 直接通过ID查找容器，然后提取 input
+                containerElement = document.getElementById('delete-image-index');
+                if (containerElement) {
+                    deleteIndexInput = extractInputFromContainer(containerElement);
+                    // 如果没找到，尝试更深层的查找
+                    if (!deleteIndexInput) {
+                        // 查找所有可能的 input
+                        const allInputsInContainer = containerElement.querySelectorAll('input, textarea');
+                        for (let inp of allInputsInContainer) {
+                            if (inp.tagName === 'INPUT' || inp.tagName === 'TEXTAREA') {
+                                deleteIndexInput = inp;
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+                // 方法2: 通过 data-testid 查找
+                if (!deleteIndexInput) {
+                    containerElement = document.querySelector('[data-testid="delete-image-index"]');
+                    if (containerElement) {
+                        deleteIndexInput = extractInputFromContainer(containerElement);
+                    }
+                }
+                
+                // 方法3: 查找所有包含 delete-image-index 的元素
+                if (!deleteIndexInput) {
+                    const candidates = document.querySelectorAll('[id*="delete-image-index"], [data-testid*="delete-image-index"]');
+                    for (let candidate of candidates) {
+                        deleteIndexInput = extractInputFromContainer(candidate);
+                        if (deleteIndexInput) break;
+                    }
+                }
+                
+                // 方法4: 通过查找所有 textbox 类型的 input，然后检查父元素
+                if (!deleteIndexInput) {
+                    const allInputs = document.querySelectorAll('input[type="text"], input:not([type]), textarea');
+                    for (let input of allInputs) {
+                        // 检查父元素或祖先元素是否包含 delete-image-index
+                        let parent = input.parentElement;
+                        let depth = 0;
+                        while (parent && depth < 10) {
+                            const parentId = parent.id || '';
+                            const parentTestId = parent.getAttribute('data-testid') || '';
+                            const parentClass = parent.className || '';
+                            if (parentId.includes('delete-image-index') || 
+                                parentTestId.includes('delete-image-index') ||
+                                parentClass.includes('delete-image-index')) {
+                                deleteIndexInput = input;
+                                break;
+                            }
+                            parent = parent.parentElement;
+                            depth++;
+                        }
+                        if (deleteIndexInput) break;
+                    }
+                }
+                
+                // 方法5: 使用 Gradio 的内部 API（如果可用）
+                if (!deleteIndexInput) {
+                    try {
+                        const gradioApp = window.__gradio_app__ || 
+                                         (document.querySelector('gradio-app') && document.querySelector('gradio-app').__gradio_app__);
+                        if (gradioApp) {
+                            const componentMap = gradioApp._id_to_component || {};
+                            for (let [compId, component] of Object.entries(componentMap)) {
+                                if (compId.includes('delete-image-index')) {
+                                    if (component.querySelector) {
+                                        deleteIndexInput = component.querySelector('input, textarea');
+                                    } else if (component.tagName === 'INPUT' || component.tagName === 'TEXTAREA') {
+                                        deleteIndexInput = component;
+                                    }
+                                    if (deleteIndexInput) break;
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        // 忽略错误
+                    }
+                }
+                
+                // 如果找到的是容器而不是 input，尝试从容器中提取
+                if (containerElement && !deleteIndexInput) {
+                    console.log('找到容器但未找到 input，尝试深度查找:', containerElement);
+                    // 尝试所有可能的选择器
+                    const selectors = [
+                        'input[type="text"]',
+                        'input:not([type])',
+                        'textarea',
+                        'input',
+                        '*[contenteditable="true"]'
+                    ];
+                    for (let selector of selectors) {
+                        const found = containerElement.querySelector(selector);
+                        if (found && (found.tagName === 'INPUT' || found.tagName === 'TEXTAREA')) {
+                            deleteIndexInput = found;
+                            console.log('通过选择器找到 input:', selector, found);
+                            break;
+                        }
+                    }
+                }
+                
+                if (deleteIndexInput && (deleteIndexInput.tagName === 'INPUT' || deleteIndexInput.tagName === 'TEXTAREA')) {
+                    console.log('找到有效的 input 元素:', deleteIndexInput.tagName, deleteIndexInput);
+                    // 设置值
+                    const oldValue = deleteIndexInput.value || '';
+                    deleteIndexInput.value = String(index);
+                    console.log('设置值:', oldValue, '->', deleteIndexInput.value);
+                    
+                    // 如果值没有改变，强制触发事件
+                    if (oldValue === String(index)) {
+                        // 先清空再设置，确保触发 change 事件
+                        deleteIndexInput.value = '';
+                        deleteIndexInput.value = String(index);
+                    }
+                    
+                    // 触发多个事件以确保 Gradio 检测到变化
+                    const events = ['input', 'change', 'blur', 'keyup'];
+                    events.forEach(eventType => {
+                        const event = new Event(eventType, { 
+                            bubbles: true, 
+                            cancelable: true 
+                        });
+                        deleteIndexInput.dispatchEvent(event);
+                        console.log('触发事件:', eventType);
+                    });
+                    
+                    // 也尝试触发 focus 和 blur 来确保更新
+                    try {
+                        deleteIndexInput.focus();
+                        setTimeout(() => {
+                            if (deleteIndexInput) deleteIndexInput.blur();
+                        }, 10);
+                    } catch (e) {
+                        console.log('focus/blur 错误:', e);
+                    }
+                    
+                    // 使用 InputEvent 来模拟真实的输入
+                    try {
+                        const inputEvent = new InputEvent('input', {
+                            bubbles: true,
+                            cancelable: true,
+                            data: String(index)
+                        });
+                        deleteIndexInput.dispatchEvent(inputEvent);
+                    } catch (e) {
+                        console.log('InputEvent 不支持:', e);
+                    }
+                    
+                    // 使用 CustomEvent 触发 change
+                    try {
+                        const customEvent = new CustomEvent('change', {
+                            bubbles: true,
+                            cancelable: true,
+                            detail: { value: String(index) }
+                        });
+                        deleteIndexInput.dispatchEvent(customEvent);
+                    } catch (e) {
+                        console.log('CustomEvent 错误:', e);
+                    }
+                    
+                    // 尝试使用 Gradio 的内部更新机制
+                    try {
+                        const gradioApp = window.__gradio_app__ || 
+                                         (document.querySelector('gradio-app') && document.querySelector('gradio-app').__gradio_app__);
+                        if (gradioApp && gradioApp._id_to_component) {
+                            for (let [compId, component] of Object.entries(gradioApp._id_to_component)) {
+                                if (compId.includes('delete-image-index')) {
+                                    console.log('找到 Gradio 组件:', compId);
+                                    if (component.value !== undefined) {
+                                        component.value = String(index);
+                                        console.log('更新组件值:', component.value);
+                                    }
+                                    if (component.dispatch_event) {
+                                        component.dispatch_event('change', String(index));
+                                        console.log('触发组件事件');
+                                    }
+                                    if (component.update) {
+                                        component.update({ value: String(index) });
+                                        console.log('调用组件 update');
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.log('Gradio API 更新失败:', e);
+                    }
+                    
+                    // 延迟再次触发 change 事件
+                    setTimeout(() => {
+                        const changeEvent = new Event('change', { bubbles: true, cancelable: true });
+                        deleteIndexInput.dispatchEvent(changeEvent);
+                        console.log('延迟触发 change 事件');
+                    }, 50);
+                    
+                    console.log('已设置删除索引:', index, '最终值:', deleteIndexInput.value);
+                    return true;
+                } else {
+                    console.warn('未找到有效的 input 元素');
+                    console.warn('找到的元素:', deleteIndexInput);
+                    console.warn('元素类型:', deleteIndexInput ? deleteIndexInput.tagName : 'null');
+                    if (containerElement) {
+                        console.warn('容器元素:', containerElement);
+                        console.warn('容器内的所有元素:', containerElement.innerHTML.substring(0, 200));
+                    }
+                    return false;
+                }
+            } catch (e) {
+                console.error('删除图片时出错:', e);
+                return false;
+            }
+        }
+        
+        if (!findAndUpdateInput()) {
+            // 延迟重试（最多重试10次）
+            if (!window._deleteImageRetryCount) {
+                window._deleteImageRetryCount = 0;
+            }
+            if (window._deleteImageRetryCount < 10) {
+                window._deleteImageRetryCount++;
+                setTimeout(function() {
+                    window.deleteImage(index);
+                }, 300);
+            } else {
+                window._deleteImageRetryCount = 0;
+                console.error('删除图片失败：无法找到输入组件，已重试10次');
+            }
+        } else {
+            window._deleteImageRetryCount = 0;
+        }
+    };
 })();
 </script>
 """
@@ -1146,6 +1544,60 @@ def create_interface():
                             scale=0
                         )
                 
+                # 图片上传卡片
+                with gr.Column(elem_classes=["image-upload-card"]):
+                    gr.HTML("""
+                    <div class="image-upload-title">
+                        <span>🖼️</span>
+                        <span>上传图片</span>
+                    </div>
+                    """)
+                    
+                    # 图片上传组件（隐藏默认样式）
+                    image_upload = gr.File(
+                        label="",
+                        file_types=["image"],
+                        file_count="multiple",
+                        elem_classes=["hide-gradio-default"]
+                    )
+                    
+                    # 图片上传按钮
+                    with gr.Row():
+                        gr.HTML('<div style="flex: 1;"></div>')
+                        image_upload_btn = gr.Button(
+                            "选择图片 📷",
+                            elem_classes=["image-upload-button"],
+                            scale=0
+                        )
+                        gr.HTML('<div style="flex: 1;"></div>')
+                    
+                    gr.HTML("""
+                    <div class="file-info" style="margin-top: 10px;">
+                        <div>支持格式: JPG, PNG, GIF, WebP</div>
+                        <div>可同时上传多张图片</div>
+                    </div>
+                    """)
+                    
+                    # 图片画廊（使用State存储图片列表）
+                    uploaded_images_state = gr.State(value=[])  # 存储图片路径列表
+                    
+                    # 图片显示区域（使用HTML显示，支持删除按钮）
+                    image_display = gr.HTML(
+                        value='<div class="empty-gallery-message">暂无图片，请上传图片</div>',
+                        elem_id="image-display"
+                    )
+                    
+                    # 隐藏的删除索引输入（用于传递要删除的图片索引）
+                    # 使用CSS隐藏但仍在DOM中，确保JavaScript能找到
+                    delete_image_index = gr.Textbox(
+                        value="",
+                        label="",
+                        visible=True,  # 设置为可见，但通过CSS隐藏
+                        interactive=True,
+                        elem_id="delete-image-index",
+                        elem_classes=["hidden-delete-index"]
+                    )
+                
                 # 模板预览区域
                 template_preview = gr.Code(
                     label="模板预览",
@@ -1176,7 +1628,151 @@ def create_interface():
                     fn=trigger_upload,
                     inputs=[],
                     outputs=[],
-                    js="() => { const fileInput = document.querySelector('input[type=file]'); if(fileInput) fileInput.click(); }"
+                    js="() => { const fileInputs = document.querySelectorAll('input[type=file]'); if(fileInputs && fileInputs[0]) fileInputs[0].click(); }"
+                )
+                
+                # 图片上传相关函数
+                def trigger_image_upload():
+                    """触发图片文件选择"""
+                    return gr.update()
+                
+                image_upload_btn.click(
+                    fn=trigger_image_upload,
+                    inputs=[],
+                    outputs=[],
+                    js="""
+                    () => { 
+                        // 查找图片上传的file input
+                        // 由于Gradio会为每个File组件创建input，我们需要找到第二个（图片上传的）
+                        const fileInputs = Array.from(document.querySelectorAll('input[type=file]'));
+                        // 找到accept属性包含image的input，或者第二个file input
+                        let imageInput = fileInputs.find(input => 
+                            input.accept && (
+                                input.accept.includes('image') || 
+                                input.accept.includes('image/*')
+                            )
+                        );
+                        // 如果找不到，使用第二个file input（假设第一个是文档上传）
+                        if (!imageInput && fileInputs.length > 1) {
+                            imageInput = fileInputs[1];
+                        }
+                        if (imageInput) {
+                            imageInput.click();
+                        }
+                    }
+                    """
+                )
+                
+                def generate_image_html(image_list):
+                    """生成图片显示的HTML，包含删除按钮"""
+                    if not image_list or len(image_list) == 0:
+                        return '<div class="empty-gallery-message">暂无图片，请上传图片</div>'
+                    
+                    html_parts = ['<div style="display: flex; flex-wrap: wrap; gap: 15px; margin-top: 10px;">']
+                    
+                    for idx, image_path in enumerate(image_list):
+                        # 获取图片文件名用于显示
+                        image_name = os.path.basename(image_path) if image_path else f"image_{idx}"
+                        # 确保路径是有效的
+                        if not image_path or not os.path.exists(image_path):
+                            continue
+                        
+                        # 读取图片并转换为base64（用于在HTML中显示）
+                        try:
+                            with open(image_path, 'rb') as f:
+                                image_data = f.read()
+                                image_base64 = base64.b64encode(image_data).decode('utf-8')
+                                # 根据文件扩展名确定MIME类型
+                                ext = os.path.splitext(image_path)[1].lower()
+                                mime_type = {
+                                    '.jpg': 'image/jpeg',
+                                    '.jpeg': 'image/jpeg',
+                                    '.png': 'image/png',
+                                    '.gif': 'image/gif',
+                                    '.webp': 'image/webp'
+                                }.get(ext, 'image/jpeg')
+                                
+                                image_src = f"data:{mime_type};base64,{image_base64}"
+                        except Exception as e:
+                            print(f"[Web UI] 读取图片失败 {image_path}: {e}")
+                            continue
+                        
+                        html_parts.append(f'''
+                        <div class="image-item-wrapper" data-image-index="{idx}">
+                            <img src="{image_src}" alt="{image_name}" style="max-width: 200px; max-height: 200px; display: block;" />
+                            <button class="image-delete-btn" onclick="window.deleteImage({idx})" title="删除图片">✕</button>
+                        </div>
+                        ''')
+                    
+                    html_parts.append('</div>')
+                    return ''.join(html_parts)
+                
+                def handle_image_upload(files, current_images):
+                    """处理图片上传：将新图片添加到列表"""
+                    if files is None:
+                        image_list = current_images or []
+                        html_content = generate_image_html(image_list)
+                        return image_list, gr.update(value=html_content)
+                    
+                    # 将单个文件或文件列表转换为列表
+                    if not isinstance(files, list):
+                        files = [files]
+                    
+                    # 获取当前图片列表
+                    image_list = list(current_images) if current_images else []
+                    
+                    # 添加新图片
+                    for file in files:
+                        if file is not None:
+                            # 获取图片路径
+                            image_path = file.name if hasattr(file, 'name') else str(file)
+                            # 避免重复添加
+                            if image_path not in image_list:
+                                image_list.append(image_path)
+                    
+                    html_content = generate_image_html(image_list)
+                    return image_list, gr.update(value=html_content)
+                
+                def trigger_delete_image(delete_index_str, current_images):
+                    """触发删除图片（从JavaScript调用）"""
+                    try:
+                        # 从字符串转换为整数
+                        if not delete_index_str or delete_index_str == "":
+                            image_list = current_images or []
+                            html_content = generate_image_html(image_list)
+                            return image_list, gr.update(value=html_content), gr.update(value="")
+                        
+                        delete_index = int(delete_index_str)
+                        
+                        if not current_images or delete_index < 0 or delete_index >= len(current_images):
+                            image_list = current_images or []
+                            html_content = generate_image_html(image_list)
+                            return image_list, gr.update(value=html_content), gr.update(value="")
+                        
+                        # 创建新列表，移除指定索引的图片
+                        new_images = list(current_images)
+                        del new_images[delete_index]
+                        
+                        html_content = generate_image_html(new_images)
+                        return new_images, gr.update(value=html_content), gr.update(value="")
+                    except (ValueError, TypeError) as e:
+                        print(f"[Web UI] 删除图片时出错: {e}")
+                        image_list = current_images or []
+                        html_content = generate_image_html(image_list)
+                        return image_list, gr.update(value=html_content), gr.update(value="")
+                
+                # 删除图片事件（当delete_image_index改变时触发）
+                delete_image_index.change(
+                    fn=trigger_delete_image,
+                    inputs=[delete_image_index, uploaded_images_state],
+                    outputs=[uploaded_images_state, image_display, delete_image_index]
+                )
+                
+                # 图片上传变化事件
+                image_upload.change(
+                    fn=handle_image_upload,
+                    inputs=[image_upload, uploaded_images_state],
+                    outputs=[uploaded_images_state, image_display]
                 )
                 
                 # 文件上传/删除处理函数
