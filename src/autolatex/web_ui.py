@@ -882,8 +882,8 @@ def preview_template(template_name: str) -> str:
     except Exception as e:
         return f"预览模板失败: {str(e)}"
 
-def process_file(file, journal_type):
-    """处理上传的文件并生成LaTeX（通过后端 REST API 上传 + 转换）"""
+def process_file(file, journal_type, images=None):
+    """处理上传的文件并生成LaTeX（通过后端 REST API 上传 + 转换），同时上传图片"""
     print("[Web UI] process_file 被调用")  # 调试日志
     if file is None:
         print("[Web UI] 未选择文件")
@@ -912,9 +912,29 @@ def process_file(file, journal_type):
         orig_name = getattr(file, "orig_name", None) or os.path.basename(file.name)
 
         print(f"[Web UI] 准备上传文件: {orig_name}, 临时路径: {file.name}")
+        
+        # 准备文件上传（文档 + 图片）
+        files = {}
+        
+        # 读取文档文件
         with open(file.name, "rb") as f:
-            files = {"file": (orig_name, f, "application/octet-stream")}
-            resp = requests.post(upload_url, files=files, timeout=60)
+            files["file"] = (orig_name, f.read(), "application/octet-stream")
+        
+        # 如果有图片，一起上传
+        image_paths = []
+        if images and len(images) > 0:
+            print(f"[Web UI] 准备上传 {len(images)} 张图片")
+            for idx, image_path in enumerate(images):
+                if image_path and os.path.exists(image_path):
+                    image_name = os.path.basename(image_path)
+                    # 使用 image_0, image_1, ... 作为字段名
+                    with open(image_path, "rb") as img_f:
+                        files[f"image_{idx}"] = (image_name, img_f.read(), "image/jpeg")
+                    image_paths.append(image_path)
+                    print(f"[Web UI] 添加图片: {image_name}")
+        
+        # 上传文件（文档和图片）
+        resp = requests.post(upload_url, files=files, timeout=120)
 
         if resp.status_code != 200:
             print(f"[Web UI] 上传接口 HTTP {resp.status_code}: {resp.text}")
@@ -933,11 +953,23 @@ def process_file(file, journal_type):
 
     # 2. 调用 /api/v1/paper/convert 进行论文转换
     try:
+        # 获取上传后的图片路径（如果后端返回了图片路径）
+        uploaded_image_paths = data.get("image_paths", [])
+        if not uploaded_image_paths and image_paths:
+            # 如果后端没有返回图片路径，使用原始路径（可能需要后端处理）
+            uploaded_image_paths = image_paths
+        
         payload = {
             "file_path": file_path,
             "journal_name": journal_type or "",
             "topic": "自动将word、txt、markdown格式论文转化为Latex格式论文",
         }
+        
+        # 如果有图片，添加到 payload
+        if uploaded_image_paths:
+            payload["image_paths"] = uploaded_image_paths
+            print(f"[Web UI] 转换时将包含 {len(uploaded_image_paths)} 张图片")
+        
         print(f"[Web UI] 调用转换接口, payload={payload}")
         resp_conv = requests.post(convert_url, json=payload, timeout=600)
         if resp_conv.status_code != 200:
@@ -968,14 +1000,23 @@ def process_file(file, journal_type):
         pdf_name = conv_data.get("pdf_filename")
         download_update = build_download_link(pdf_url, pdf_name)
 
-        return (
+        # 构建返回消息
+        result_message = (
             f"✅ 论文文件已通过 REST API 上传并转换成功。\n"
             f"文件名: {filename}\n"
-            f"上传保存路径: {file_path}\n\n"
-            f"转换结果: {message}\n"
-            f"LaTeX 输出路径: {output_path}",
-            download_update,
+            f"上传保存路径: {file_path}\n"
         )
+        
+        # 如果有图片，添加图片信息
+        if image_paths:
+            result_message += f"\n📷 已上传 {len(image_paths)} 张公式图片\n"
+        
+        result_message += (
+            f"\n转换结果: {message}\n"
+            f"LaTeX 输出路径: {output_path}"
+        )
+
+        return result_message, download_update
     except Exception as e:
         print(f"[Web UI] 调用转换接口异常: {e}")
         return (
@@ -1317,6 +1358,29 @@ window.showSidebar = function() {
             }
         }
     }
+    
+    // 全局函数：展开图片上传区域
+    window.expandImageUpload = function() {
+        const toggleBtn = document.getElementById('image-upload-toggle');
+        const uploadContent = document.getElementById('image-upload-content');
+        
+        if (toggleBtn && uploadContent) {
+            // 如果已经展开，不重复操作
+            if (uploadContent.classList.contains('image-upload-content-expanded')) {
+                return;
+            }
+            
+            // 展开
+            uploadContent.style.display = 'block';
+            uploadContent.classList.remove('image-upload-content-collapsed');
+            uploadContent.classList.add('image-upload-content-expanded');
+            setTimeout(() => {
+                uploadContent.style.opacity = '1';
+            }, 10);
+            toggleBtn.textContent = '▲';
+            toggleBtn.classList.remove('collapsed');
+        }
+    };
     
     // 设置图片上传展开/收起
     setupImageUploadToggle();
@@ -1801,22 +1865,109 @@ def create_interface():
                     outputs=[],
                     js="""
                     () => { 
-                        // 查找图片上传的file input
-                        // 由于Gradio会为每个File组件创建input，我们需要找到第二个（图片上传的）
-                        const fileInputs = Array.from(document.querySelectorAll('input[type=file]'));
-                        // 找到accept属性包含image的input，或者第二个file input
-                        let imageInput = fileInputs.find(input => 
-                            input.accept && (
-                                input.accept.includes('image') || 
-                                input.accept.includes('image/*')
-                            )
-                        );
-                        // 如果找不到，使用第二个file input（假设第一个是文档上传）
-                        if (!imageInput && fileInputs.length > 1) {
-                            imageInput = fileInputs[1];
+                        // 首先确保图片上传区域是展开的
+                        const imageUploadContent = document.getElementById('image-upload-content');
+                        let needsExpansion = false;
+                        if (imageUploadContent && imageUploadContent.classList.contains('image-upload-content-collapsed')) {
+                            if (window.expandImageUpload) {
+                                window.expandImageUpload();
+                                needsExpansion = true;
+                            }
                         }
-                        if (imageInput) {
-                            imageInput.click();
+                        
+                        // 如果展开了，等待一下让动画完成
+                        const findAndClickInput = () => {
+                            // 查找图片上传的file input
+                            const fileInputs = Array.from(document.querySelectorAll('input[type=file]'));
+                            console.log('找到的 file inputs 数量:', fileInputs.length);
+                            
+                            let imageInput = null;
+                        
+                        // 方法1: 查找 accept 属性包含 .jpg 或 .jpeg 的 input
+                        imageInput = fileInputs.find(input => {
+                            const accept = input.accept || '';
+                            return accept.includes('.jpg') || accept.includes('.jpeg') || 
+                                   accept.includes('image/jpeg') || accept.includes('image/*');
+                        });
+                        
+                        // 方法2: 通过查找图片上传区域的容器来定位 input
+                        if (!imageInput) {
+                            const imageUploadContent = document.getElementById('image-upload-content');
+                            if (imageUploadContent) {
+                                const inputsInContent = imageUploadContent.querySelectorAll('input[type=file]');
+                                if (inputsInContent.length > 0) {
+                                    imageInput = inputsInContent[0];
+                                    console.log('通过容器找到图片上传 input');
+                                }
+                            }
+                        }
+                        
+                        // 方法3: 查找所有 input，检查其父元素是否在图片上传区域内
+                        if (!imageInput) {
+                            for (let input of fileInputs) {
+                                let parent = input.parentElement;
+                                let depth = 0;
+                                while (parent && depth < 10) {
+                                    if (parent.id === 'image-upload-content' || 
+                                        parent.classList.contains('image-upload-content-expanded') ||
+                                        parent.classList.contains('image-upload-content-collapsed')) {
+                                        imageInput = input;
+                                        console.log('通过父元素找到图片上传 input');
+                                        break;
+                                    }
+                                    parent = parent.parentElement;
+                                    depth++;
+                                }
+                                if (imageInput) break;
+                            }
+                        }
+                        
+                        // 方法4: 如果文档已上传，查找第二个 file input（假设第一个是文档上传）
+                        if (!imageInput && fileInputs.length > 1) {
+                            // 检查第一个是否是文档上传（通过检查其父元素或 accept 属性）
+                            const firstInput = fileInputs[0];
+                            const firstAccept = firstInput.accept || '';
+                            // 如果第一个 input 的 accept 不包含 image，那么第二个可能是图片上传
+                            if (!firstAccept.includes('image') && !firstAccept.includes('.jpg') && !firstAccept.includes('.jpeg')) {
+                                imageInput = fileInputs[1];
+                                console.log('使用第二个 file input（假设第一个是文档上传）');
+                            }
+                        }
+                        
+                        // 方法5: 如果只有一个 file input，检查它是否是图片上传
+                        if (!imageInput && fileInputs.length === 1) {
+                            const accept = fileInputs[0].accept || '';
+                            if (accept.includes('.jpg') || accept.includes('.jpeg') || accept.includes('image')) {
+                                imageInput = fileInputs[0];
+                                console.log('使用唯一的 file input（确认是图片上传）');
+                            }
+                        }
+                        
+                            if (imageInput) {
+                                console.log('找到图片上传 input，准备点击');
+                                // 确保 input 可见且可点击
+                                if (imageInput.style.display === 'none') {
+                                    imageInput.style.display = 'block';
+                                }
+                                // 确保 input 没有被禁用
+                                if (imageInput.disabled) {
+                                    imageInput.disabled = false;
+                                }
+                                imageInput.click();
+                            } else {
+                                console.warn('未找到图片上传 input，所有 file inputs:', fileInputs.map(i => ({
+                                    accept: i.accept,
+                                    id: i.id,
+                                    parent: i.parentElement?.id || i.parentElement?.className
+                                })));
+                            }
+                        };
+                        
+                        // 如果展开了区域，等待动画完成后再查找和点击
+                        if (needsExpansion) {
+                            setTimeout(findAndClickInput, 350);
+                        } else {
+                            findAndClickInput();
                         }
                     }
                     """
@@ -1934,11 +2085,12 @@ def create_interface():
                 
                 # 文件上传/删除处理函数
                 def handle_file_change(file):
-                    """处理文件变化：显示/隐藏删除按钮，更新输出信息"""
+                    """处理文件变化：显示/隐藏删除按钮，更新输出信息，自动展开图片上传区域"""
                     if file is not None:
+                        # 返回更新和 JavaScript 代码来展开图片上传区域
                         return (
                             gr.update(visible=True),  # 显示删除按钮
-                            f"文件已上传: {os.path.basename(file.name)}"
+                            f"文件已上传: {os.path.basename(file.name)}\n提示：图片上传区域已自动展开，您可以上传公式图片。"
                         )
                     else:
                         return (
@@ -1958,7 +2110,8 @@ def create_interface():
                 file_upload.change(
                     fn=handle_file_change,
                     inputs=[file_upload],
-                    outputs=[delete_btn, output]
+                    outputs=[delete_btn, output],
+                    js="(file) => { if (file && window.expandImageUpload) { setTimeout(() => window.expandImageUpload(), 100); } }"
                 )
                 
                 # 删除按钮点击事件
@@ -1993,7 +2146,7 @@ def create_interface():
                     queue=False,
                 ).then(
                     fn=process_file,
-                    inputs=[file_upload, journal_dropdown],
+                    inputs=[file_upload, journal_dropdown, uploaded_images_state],
                     outputs=[output, download_link],
                 ).then(
                     fn=reset_generate_state,
