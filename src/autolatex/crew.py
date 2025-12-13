@@ -5,7 +5,7 @@ from typing import List
 from .model import DocumentStructure, EquationList 
 from autolatex.tools.document_tools import DocumentParserTool
 from autolatex.tools.latex_tools import LaTeXCompilerTool
-from autolatex.tools.ocr_tool import DeepSeekOCRTool
+from autolatex.tools.mixtex_ocr_tool import MixTexOCRTool
 from autolatex.tools.knowledge_tools import KnowledgeBaseSearchTool
 from crewai import LLM
 
@@ -68,13 +68,13 @@ class Autolatex():
             tools=[LaTeXCompilerTool()]
         )
     
-    # --- 5. deepseek-OCR调用agent ---
+    # --- 5. MixTex OCR 调用 Agent ---
     @agent
     def latex_equation_form_agent(self) -> Agent:
         return Agent(
             config=self.agents_config['latex_equation_form_agent'],
-            # 关键点：这里必须给它一个能调用 DeepSeek OCR API 的工具
-            tools=[DeepSeekOCRTool()], 
+            # 使用封装好的 MixTex OCR API 工具
+            tools=[MixTexOCRTool()], 
             verbose=True
         )
     

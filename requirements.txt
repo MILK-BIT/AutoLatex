@@ -1,5 +1,7 @@
+# --- CrewAI 相关依赖 ---
 crewai
-crewai-tools
+crewai-tools>=1.5.0
+crewai[tools]>=1.5.0
 langchain-openai
 python-dotenv
 
@@ -11,10 +13,11 @@ python-docx
 # 向量数据库
 chromadb>=0.4.0
 
-# FastAPI 后端
-fastapi>=0.104.0
+# --- FastAPI 后端和 API 服务依赖 ---
+fastapi>=0.123.0
 uvicorn[standard]>=0.24.0
-python-multipart>=0.0.6
+python-multipart>=0.0.20
+pydantic>=2.0.0
 
 # Gradio Web UI（锁定到与你当前环境一致的版本）
 gradio==5.49.1
@@ -22,12 +25,25 @@ gradio==5.49.1
 # HTTP 客户端
 requests>=2.31.0
 
-# --- Latex-OCR 训练相关依赖（C 同学） ---
+# --- MixTex OCR 模型推理依赖 ---
+# PyTorch（根据硬件选择，CPU 或 GPU 版本）
+# CPU 版本：
 torch>=2.0.0
+# GPU 版本（CUDA 11.8）：
+# torch>=2.0.0+cu118 --index-url https://download.pytorch.org/whl/cu118
+# GPU 版本（CUDA 12.1）：
+# torch>=2.0.0+cu121 --index-url https://download.pytorch.org/whl/cu121
+
+# Transformers 和相关库
 transformers>=4.44.0
 accelerate>=0.33.0
-datasets>=2.20.0
 peft>=0.12.0
+
+# 数值计算和图片处理
+numpy>=1.24.0
 Pillow>=10.0.0
+
+# --- 训练相关依赖 ---
+datasets>=2.20.0
 tqdm>=4.66.0
 modelscope>=1.15.0
