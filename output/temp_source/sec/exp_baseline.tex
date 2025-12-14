@@ -1,0 +1,27 @@
+\subsection{Baseline Performance}
+
+Our experimental results are presented through four comprehensive tables in this section: Table~\ref{tab:baseline} reports baseline performance of all six models across nine temporal reasoning subtasks; Table~\ref{tab:finetuned} demonstrates fine-tuning results for the five open-source models after comprehensive fine-tuning; Table~\ref{tab:visual} records visual recognition capabilities on the UCM dataset to demonstrate that temporal reasoning challenges are not due to visual encoding deficiencies; Table~\ref{tab:crossdomain} details cross-dataset validation results on TemporalVQA, demonstrating the transferability of acquired temporal understanding capabilities.
+
+\begin{table}[htbp]
+\centering
+\caption{Baseline Performance of Six Models}
+\label{tab:baseline}
+\begin{tabular}{|l|c|c|c|c|c|c|c|c|c|}
+\hline
+Model & TAL & ISR (PNR) & SOV & POV & TPL & ICE & PIC & IPR (PNR) & EII \\
+\hline
+Intern-VL & 21.0\% & 1.0202 & 53.0\% & 45.5\% & 58.0\% & 20.0\% & 44.0\% & 0.8519 & 23.5\% \\
+Mimo-VL & 75.5\% & 1.2497 & 57.5\% & 54.0\% & 61.0\% & 23.5\% & 55.5\% & 1.2472 & 21.0\% \\
+MiniCPM & 75.5\% & 1.8409 & 60.5\% & 58.5\% & 58.5\% & 21.0\% & 44.5\% & 1.0906 & 30.0\% \\
+Ovis & 85.0\% & 1.1299 & 53.0\% & 48.0\% & 53.5\% & 22.5\% & 56.5\% & 0.9608 & 27.5\% \\
+Qwen3-VL & 66.5\% & 1.2989 & 66.0\% & 57.0\% & 56.0\% & 23.5\% & 56.5\% & 0.7804 & 23.5\% \\
+GPT-4o mini & 78.5\% & 0.3093 & 57.5\% & 48.0\% & 61.0\% & 23.0\% & 46.0\% & 0.2500 & 25.0\% \\
+\hline
+\end{tabular}
+\end{table}
+
+Our evaluation reveals that unfine-tuned models demonstrate limited temporal reasoning capabilities on both TOU and TIU tasks, highlighting the challenges current multimodal large language models face in temporal understanding. Table~\ref{tab:baseline} presents comprehensive baseline results for all six evaluated models across nine temporal reasoning subtasks (five TOU tasks and four TIU tasks).
+
+For TOU tasks, baseline models exhibit highly unbalanced performance distributions. In the TAL task, most models demonstrate capabilities significantly above random baseline, with Ovis achieving 85.0\% accuracy, and MiniCPM and MiMo-VL reaching 75.5\%, indicating that models possess fundamental capabilities for localizing specific anomalous frame positions within temporal sequences. However, in the more challenging ISR task, baseline models achieve PNR scores mostly close to 1.0, approaching random ordering levels, with InternVL at only 1.0202, indicating models struggle to infer complete temporal orders from visual observations. Notably, GPT-4o mini achieves a PNR of 0.3093 on the ISR task, significantly below 1.0, which may reflect systematic misunderstanding of the ordering direction in task instructions. In other judgment-based TOU subtasks, model performance slightly exceeds random baselines: SOV task accuracy ranges from 53.0\%--66.0\% (random baseline 50\%), POV task accuracy ranges from 45.5\%--58.5\% (random baseline 50\%), and TPL task accuracy ranges from 53.5\%--61.0\% (random baseline 50\%). These results indicate that while models can perform temporal judgments in simplified binary classification scenarios, their performance advantages remain relatively limited.
+
+For TIU tasks, baseline performance reveals greater challenges in quantitative temporal reasoning. In the ICE task, model accuracy only slightly exceeds the 20\% random baseline, indicating models struggle to map visual changes to discrete time intervals. The EII task similarly shows limited performance, with model accuracies approaching the 25\% random baseline. Similar to ISR in TOU tasks, GPT-4o mini appears to misunderstand ordering direction in the IPR task's PNR scores in TIU, while other models similarly approach or fall slightly below random ordering. Model performance on the PIC task either slightly exceeds or falls slightly below random choice. These results indicate that without specific training, current multimodal large language models lack the ability to perform fine-grained temporal interval quantification from visual observations, with performance across all TIU subtasks clustering near random baselines.

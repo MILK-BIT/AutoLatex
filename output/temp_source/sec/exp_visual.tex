@@ -1,0 +1,24 @@
+\subsection{Visual Recognition Capability Validation}
+
+To verify whether limited performance on temporal reasoning tasks stems from visual encoding deficiencies in models, we evaluated the visual recognition capabilities of five open-source models on the UCM (UC Merced Land Use) remote sensing image classification dataset. Table~\ref{tab:visual} presents the accuracy of all models on this standard visual classification task.
+
+\begin{table}[htbp]
+\centering
+\caption{Visual Recognition Capability Validation on UCM}
+\label{tab:visual}
+\begin{tabular}{|l|c|}
+\hline
+Model & UCM Accuracy \\
+\hline
+Intern-VL & 95.5\% \\
+Mimo-VL & 95.5\% \\
+MiniCPM & 93.0\% \\
+Ovis & 94.0\% \\
+Qwen3-VL & 91.5\% \\
+\hline
+\end{tabular}
+\end{table}
+
+The UCM dataset contains 21 categories, and for each sample we select 5 categories including the correct category, with a random baseline of approximately 20\%. Experimental results demonstrate that all evaluated models exhibit exceptional visual recognition capabilities, with accuracies all above 0.915, with InternVL and MiMo-VL achieving the highest accuracy of 0.955, Ovis reaching 0.94, MiniCPM reaching 0.93, and Qwen3-VL reaching 0.915. These results significantly exceed random guessing levels, demonstrating that all models possess robust remote sensing image feature extraction and category recognition capabilities.
+
+This clearly excludes visual encoding deficiencies as the primary cause of limited temporal reasoning performance. The high accuracy of models on UCM (average 93.9\%) contrasts sharply with their near-random baseline performance on TIU tasks (such as ICE and EII), indicating that temporal reasoning difficulties do not stem from models' inability to recognize or understand visual content in individual images, but rather from models' difficulty in establishing temporal relationships across multiple images and quantifying temporal intervals.

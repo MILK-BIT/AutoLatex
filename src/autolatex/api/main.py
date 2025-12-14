@@ -2,13 +2,14 @@
 FastAPI 后端服务
 提供 AutoLaTeX 的 RESTful API 接口
 """
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from pydantic import BaseModel
 from typing import Optional, List
 import os
 import sys
+import uuid
 from urllib.parse import quote
 
 # 添加 src 目录到路径（从 api/main.py 向上两级到 src）
@@ -61,6 +62,7 @@ class PaperConvertRequest(BaseModel):
     file_path: str
     journal_name: str
     topic: Optional[str] = None
+    image_paths: Optional[List[str]] = None
 
 class PaperConvertResponse(BaseModel):
     """论文转换响应"""
@@ -160,6 +162,11 @@ async def convert_paper(request: PaperConvertRequest):
             'journal_name': request.journal_name,
         }
         
+        # 如果有图片路径，添加到输入参数中
+        if request.image_paths:
+            inputs['image_paths'] = request.image_paths
+            print(f"[API] 转换请求包含 {len(request.image_paths)} 张图片")
+        
         # 运行 Crew
         crew = Autolatex().crew()
         result = crew.kickoff(inputs=inputs)
@@ -205,30 +212,97 @@ async def convert_paper(request: PaperConvertRequest):
         )
 
 @app.post("/api/v1/paper/upload")
-async def upload_paper(file: UploadFile = File(...)):
+async def upload_paper(request: Request):
     """
-    上传论文文件
+    上传论文文件和图片
     
-    接收用户上传的论文文件并保存到临时目录
+    接收用户上传的论文文件以及公式图片（image_0, image_1, ...），并保存到临时目录
     """
     try:
+        # 解析 multipart/form-data
+        form = await request.form()
+        
+        # 调试：打印所有接收到的字段
+        print(f"[API] 接收到的表单字段: {list(form.keys())}")
+        
         # 创建上传目录（使用项目根目录下的绝对路径，避免相对路径引发的 File Not Found 问题）
         upload_dir = os.path.join(project_root, "data", "uploads")
         os.makedirs(upload_dir, exist_ok=True)
-
-        # 保存文件并返回绝对路径
-        file_path = os.path.abspath(os.path.join(upload_dir, file.filename))
-        with open(file_path, "wb") as f:
-            content = await file.read()
-            f.write(content)
         
-        return {
+        # 创建图片保存目录
+        images_dir = os.path.join(project_root, "data", "uploads", "images")
+        os.makedirs(images_dir, exist_ok=True)
+
+        # 获取文档文件
+        file_item = None
+        if "file" in form:
+            file_item = form["file"]
+        elif hasattr(form, 'get'):
+            file_item = form.get("file")
+        
+        if not file_item:
+            all_keys = list(form.keys()) if hasattr(form, 'keys') else []
+            raise HTTPException(status_code=400, detail=f"缺少文档文件。接收到的字段: {all_keys}")
+        
+        # 检查是否是 UploadFile 对象（通过检查是否有 read 方法）
+        if not hasattr(file_item, 'read'):
+            raise HTTPException(status_code=400, detail=f"文件字段格式错误，类型: {type(file_item)}")
+        
+        file = file_item
+        if not file.filename:
+            raise HTTPException(status_code=400, detail="文档文件名不能为空")
+        
+        # 保存文档文件并返回绝对路径
+        file_path = os.path.abspath(os.path.join(upload_dir, file.filename))
+        file_content = await file.read()
+        with open(file_path, "wb") as f:
+            f.write(file_content)
+        print(f"[API] 保存文档: {file.filename} -> {file_path}")
+        
+        # 获取并保存所有图片文件（image_0, image_1, ...）
+        saved_image_paths = []
+        image_keys = sorted([key for key in form.keys() if key.startswith("image_")])
+        print(f"[API] 找到图片字段: {image_keys}")
+        
+        for image_key in image_keys:
+            image_item = form.get(image_key)
+            print(f"[API] 图片字段 {image_key} 类型: {type(image_item)}")
+            
+            # 检查是否是 UploadFile 对象
+            if image_item and hasattr(image_item, 'read') and hasattr(image_item, 'filename'):
+                image_file = image_item
+                if image_file.filename:
+                    # 生成唯一文件名（使用UUID避免重名）
+                    file_ext = os.path.splitext(image_file.filename)[1] or ".jpg"
+                    unique_filename = f"{uuid.uuid4()}{file_ext}"
+                    image_path = os.path.abspath(os.path.join(images_dir, unique_filename))
+                    
+                    # 保存图片
+                    image_content = await image_file.read()
+                    with open(image_path, "wb") as img_f:
+                        img_f.write(image_content)
+                    
+                    saved_image_paths.append(image_path)
+                    print(f"[API] 保存图片: {image_file.filename} -> {image_path}")
+        
+        response_data = {
             "success": True,
             "message": "文件上传成功",
             "file_path": file_path,
-            "filename": file.filename
+            "filename": file.filename,
+            "image_paths": saved_image_paths
         }
+        
+        if saved_image_paths:
+            response_data["message"] = f"文件上传成功，已保存 {len(saved_image_paths)} 张图片"
+        
+        return response_data
+    except HTTPException:
+        raise
     except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"[API] 上传错误: {error_trace}")
         raise HTTPException(status_code=500, detail=f"文件上传失败: {str(e)}")
 
 @app.get("/api/v1/paper/download")

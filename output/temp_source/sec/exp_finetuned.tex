@@ -1,0 +1,26 @@
+\subsection{Fine-tuning Effects}
+
+Fine-tuning on TimePerceptBench training data significantly enhances temporal reasoning capabilities, though improvement levels vary noticeably across different tasks. Table~\ref{tab:finetuned} presents fine-tuning results for five open-source models, demonstrating their learning capabilities on temporal reasoning tasks.
+
+\begin{table}[htbp]
+\centering
+\caption{Fine-tuned Model Performance}
+\label{tab:finetuned}
+\begin{tabular}{|l|c|c|c|c|c|c|c|c|c|}
+\hline
+Model & TAL & ISR (PNR) & SOV & POV & TPL & ICE & PIC & IPR (PNR) & EII \\
+\hline
+Intern-VL & 77.0\% & 2.7523 & 79.5\% & 65.5\% & 79.0\% & 26.5\% & 54.0\% & 1.5105 & 30.5\% \\
+Mimo-VL & 93.0\% & 3.9383 & 85.5\% & 76.0\% & 80.0\% & 31.5\% & 59.0\% & 1.8986 & 34.0\% \\
+MiniCPM & 91.0\% & 3.1929 & 84.5\% & 74.0\% & 80.0\% & 28.0\% & 53.0\% & 1.4291 & 28.5\% \\
+Ovis & 92.0\% & 4.3476 & 86.5\% & 77.0\% & 83.5\% & 30.0\% & 67.5\% & 2.1579 & 34.0\% \\
+Qwen3-VL & 94.0\% & 4.2083 & 90.5\% & 78.5\% & 83.0\% & 29.0\% & 70.0\% & 1.2901 & 27.5\% \\
+\hline
+\end{tabular}
+\end{table}
+
+For TOU tasks, fine-tuning produces significant improvements across all subtasks. Notably in the TAL task, the InternVL model's accuracy improves dramatically from 21\% to 77.0\%. While still exhibiting some gap compared to other models with accuracy above 90\%, the 56 percentage point improvement indicates that the fine-tuned model has fully grasped the core mechanisms of this task. In the ISR task, fine-tuning brings the most remarkable improvements, with all models' PNR substantially increasing to above 2.75, with Ovis reaching 4.3476, nearly tripling from its baseline of 1.1299, indicating models successfully learned the ability to infer complete temporal orders from visual cues. Other TOU subtasks similarly exhibit consistent improvement patterns: SOV task accuracy improves to 79.5\%--90.5\% (baseline 53.0\%--66.0\%), POV task accuracy improves to 65.5\%--78.5\% (baseline 45.5\%--58.5\%), and TPL task accuracy improves to 79.0\%--83.5\% (baseline 53.5\%--61.0\%). These results indicate that with targeted training, models can establish systematic understanding of temporal order, achieving significant performance leaps across multiple granularity levels.
+
+In contrast, TIU tasks show more modest improvements after fine-tuning, revealing the inherent difficulty of quantitative temporal reasoning. In the ICE task, while all models achieve performance improvements, the improvement margins remain relatively limited, with accuracy improving from baseline 20.0\%--23.5\% to 26.5\%--31.5\%, with the best model MiMo-VL reaching 31.5\%, only an 8 percentage point improvement from its baseline of 23.5\%. This limited improvement suggests that mapping visual changes to absolute temporal scales remains a fundamental challenge, difficult to completely overcome even with specialized training. On the PIC task, fine-tuning effects are relatively more pronounced, with accuracy improving to 53.0\%--70.0\% (baseline 44.0\%--56.5\%), with Qwen3-VL reaching 70.0\%, a 13.5 percentage point improvement, indicating models possess stronger learning capabilities for relative temporal interval comparison. IPR task PNR scores improve to 1.29--2.16 (baseline 0.78--1.25); while improved, compared to the maximum PNR of 4.35 in the ISR task, ranking capability improvements in TIU tasks remain insufficient. In the EII task, accuracy improves from baseline 21.0\%--30.0\% to 27.5\%--34.0\%, with improvement margins of 4.5--7.5 percentage points, still significantly below ideal levels. These observations consistently indicate that TIU tasks, particularly those involving absolute temporal quantification (ICE and EII), pose more fundamental challenges to current model architectures.
+
+Interestingly, we observe that baseline TOU and TIU performance are not perfectly correlated across different models. Models with stronger TOU baseline performance do not necessarily excel on TIU tasks, suggesting these capabilities may rely on partially independent cognitive mechanisms. Fine-tuning amplifies model-specific advantages while revealing systematic differences in temporal reasoning approaches across different architectures. Notably, GPT-4o mini, evaluated only in baseline configuration due to API limitations, exhibits performance levels comparable to open-source models, indicating that even advanced commercial models, when insufficiently large in scale and without task-specific fine-tuning, face fundamental challenges on certain temporal reasoning tasks.

@@ -1,0 +1,85 @@
+[33m549ae33[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m 加上传公式功能v3
+[33m0872ee8[m 加上传公式功能v2
+[33m13b3528[m 加上传公式功能
+[33m5c8ca79[m added CVPR to the database
+[33mc20e69c[m delete unused papers from the database
+[33m7dfe2ad[m Merge branch 'main' of https://github.com/MILK-BIT/AutoLatex
+[33ma11324c[m 🐛 解决LLM输出截断问题
+[33me3e94a1[m Update README.md
+[33m807088b[m Delete OCR_API_使用说明.md
+[33m327474c[m Update OCR_API_启动说明.md
+[33m029c94e[m Merge branch 'main' of https://github.com/MILK-BIT/AutoLatex
+[33mc7c1e1e[m 微调模型
+[33m4245399[m Merge pull request #6 from xiaobai-cn21/main
+[33ma1a19b2[m added loading button and download option?
+[33md29b02c[m added loading button
+[33me0cf74c[m you can make the output window bigger
+[33m22fc5eb[m added delete document button
+[33mebf1b46[m added correct dependecies
+[33mf96e8a2[m B:docxparser图片路径改良
+[33m856d460[m B:parser部分问题修正
+[33m83b6e57[m B:文档解析器进一步改进
+[33m5859f64[m ⚡️ 修改使得在word/txt/markdown转json结点直接使用工具函数
+[33mcb7c23d[m Merge pull request #5 from xiaobai-cn21/main
+[33m63a17f5[m updated gradio version on req.txt
+[33mbc9c1cd[m fixed bugs
+[33meb8b92f[m frontend and backend are together
+[33maf8a91a[m 📝 Merge pull request #4（updated the frontend） from xiaobai-cn21/main
+[33mc66377a[m updated the frontend
+[33mf768a2e[m 将Docker编译加入工作流
+[33mb9b7b9e[m B:删除templates
+[33m241cd9a[m B:修改寻找模板路径
+[33m61ee20b[m 加latex模板+优化前端（还没合并）
+[33m45a016e[m Merge branch 'MILK-BIT:main' into main
+[33m7ebd4f5[m fixed bugs on the frontend
+[33md0c3b51[m 按Gradio版本配置更新Web_ui文件语句
+[33mea7d9b5[m B:B部分文件整理
+[33mdeeb711[m chore: Untrack generated files and large templates
+[33me77974c[m 更新.gitignore文件
+[33mf26adf2[m 更新.gitignore
+[33ma4355b1[m B:同一文件路径传递链
+[33m1918217[m B:修改编译器:重构 LaTeXCompilerTool 以适配新的模板管理逻辑
+[33m949ca74[m B:更新docker镜像
+[33m8c905a6[m B: 放入第一个模板（CVPR）
+[33m12efe46[m 加了优化的前端（还没合并）
+[33mac6c9a5[m 加latex模板了
+[33m316db76[m Merge branch 'main' of https://github.com/MILK-BIT/AutoLatex
+[33mb7cdfc0[m ✨ 优化项目结构，删除不必要文件
+[33mbdd7587[m 💡 对项目结构进行说明
+[33m76a08ca[m 💡 对项目结构进行说明
+[33m7a8c1c2[m ✨ 优化项目结构，删除不必要文件
+[33mc223269[m ✨ 优化项目结构，删除不必要文件
+[33m49dc1e8[m 删除因合并时冲突而出现的问题
+[33mb36abf3[m 合并 original 分支：解决所有冲突 - 合并 requirements.txt 依赖 - 整合 crew.py 功能 - 合并知识工具模块 - 整合 LaTeX 编译器 - 合并 OCR 处理器 - 整合测试文件
+[33m1b37435[m Merge pull request #2 from xiaobai-cn21/main
+[33meec0095[m B:任务3:进一步更新test_latex_compiler.py
+[33m31ce77a[m B:任务3:latex_compiler.py失败时补充log
+[33m8d701d8[m added bit-english-thesis format
+[33mcdcbd9a[m added frontend
+[33m04e0511[m A+B+C：orc工具集成
+[33m808a5ae[m Merge pull request #1 from Darcya33/original1
+[33m28a1a10[m Merge branch 'original' into original1
+[33mb5f3acd[m B:任务3.3:LaTeX 编译沙盒的完整实现与验证完成
+[33me249260[m B:任务3.2:文档解析器进一步改进完成
+[33mfc6673d[m B:任务3.1:docker镜像构建完毕
+[33me94b1c9[m 修改笔误
+[33m33ad487[m 标明更新
+[33mecb2a2c[m 将B同学的代码解析工具加入Agent
+[33m274ebe2[m Merge branch 'original' into original1
+[33mc8e3575[m Merge remote-tracking branch 'origin/original1' into original
+[33mf9dd426[m A同学新增对agent、task、crew、main的修改
+[33m51a198c[m A同学新增对agent、task、crew、main的修改
+[33mda4fc1e[m C同学任务提交
+[33maa62ecf[m Merge branch 'original' of https://github.com/MILK-BIT/AutoLatex into original
+[33md33e907[m 修改并新增AutoLatex的agent和task
+[33mc04bddb[m B:任务2:纯文本 (.txt) 解析初步完成+Markdown (.md) 解析优化
+[33md1d602e[m B:任务2.3:text测试文档编写
+[33m4fcdf98[m B:任务2:Markdown (.md) 解析初步完成
+[33m9b37ac0[m B:任务2.2:md测试文档撰写
+[33m022bca2[m B:任务2：Word文档解析器的核心功能完成
+[33mf0acaa5[m B:任务2.1word测试文档制作
+[33me7fa3ea[m B:任务1：JSON Schema相关准备完成
+[33mad37964[m Fix heading formatting in README.md
+[33mfc66ecb[m 细化readme
+[33m0cad70e[m 第一次提交，初始化项目
+[33m5f6b05a[m Initial commit

@@ -1,0 +1,26 @@
+\subsection{Cross-Domain Transferability Analysis}
+
+To evaluate whether temporal understanding capabilities learned on TimePerceptBench possess generalizability, we conducted cross-domain validation experiments on the TemporalVQA benchmark. TemporalVQA is a non-remote-sensing temporal reasoning benchmark containing image sequences of everyday life scenes, with time spans (with minimum units of seconds to minutes) significantly different from our remote sensing dataset (day to year levels). Table~\ref{tab:crossdomain} presents the performance of five open-source models on TemporalVQA before and after fine-tuning, including evaluations across TOU (720 samples) and TIU (125 samples) dimensions.
+
+\begin{table}[htbp]
+\centering
+\caption{Cross-Domain Experiments on TemporalVQA, ``Before'' represents baseline models, ``After'' represents models fine-tuned on TimePerceptBench.}
+\label{tab:crossdomain}
+\begin{tabular}{|l|c|c|c|c|c|c|}
+\hline
+Model & TOU Before & TIU Before & Overall Before & TOU After & TIU After & Overall After \\
+\hline
+Intern-VL & 50.00\% & 25.60\% & 46.39\% & 58.61\% & 50.40\% & 57.40\% \\
+Mimo-VL & 55.97\% & 40.00\% & 53.61\% & 61.11\% & 53.60\% & 60.00\% \\
+MiniCPM & 67.50\% & 56.80\% & 65.90\% & 67.50\% & 60.00\% & 66.39\% \\
+Ovis & 60.42\% & 61.60\% & 60.59\% & 65.56\% & 64.80\% & 65.44\% \\
+Qwen3-VL & 60.83\% & 63.20\% & 60.47\% & 60.83\% & 58.40\% & 60.47\% \\
+\hline
+\end{tabular}
+\end{table}
+
+Experimental results reveal interesting patterns in temporal reasoning capability transfer. Overall, models fine-tuned on TimePerceptBench demonstrate certain degrees of performance improvement on TemporalVQA, demonstrating that learned temporal understanding capabilities possess certain cross-domain generalizability. However, a more significant finding is that TIU capability transfer effects are notably superior to TOU capability transfer. TIU tasks improve by approximately 8.0 percentage points on average after fine-tuning (from baseline 25.6\%--63.2\% to 50.4\%--64.8\%), while TOU tasks improve by only approximately 3.9 percentage points (from baseline 50.0\%--67.5\% to 58.6\%--67.5\%). This difference is also confirmed at the individual model level.
+
+This asymmetry in transfer patterns reveals essential differences between different dimensions of temporal reasoning. The stronger cross-domain transfer of TIU capabilities suggests that cognitive mechanisms underlying temporal interval understanding may be more universal and abstract, not strongly constrained by specific image domains or temporal scales. Knowledge learned by models about relationships between degrees of change and temporal spans can effectively transfer across different visual domains and temporal scales. In contrast, limited TIU transfer may reflect stronger dependence of temporal order understanding on domain-specific patterns---specific temporal patterns learned in remote sensing images, such as seasonal changes and urban development, are difficult to directly apply to different temporal logic in everyday scenes. Additionally, Task 1 (temporal order understanding) improves from baseline 46.39\%--65.92\% to 57.4\%--66.39\% after fine-tuning, with improvement margins between 10--20 percentage points, exhibiting transfer patterns similar to main TOU tasks. Notably, different models exhibit different characteristics in cross-domain transfer: InternVL achieves the largest transfer gains on TIU, while Qwen3-VL's TIU performance slightly decreases after fine-tuning (from 63.2\% to 58.4\%), potentially reflecting overfitting or model architecture preferences for specific temporal scales.
+
+These cross-domain experimental results have important theoretical and practical implications. They demonstrate that temporal understanding capabilities learned on TimePerceptBench are not simple dataset overfitting, but possess certain degrees of generalization capability. Second, the stronger transferability of TIU compared to TOU, combined with its lower absolute performance on TimePerceptBench, suggests that TIU tasks, while more challenging, may possess greater room for improvement and stronger universal value.
