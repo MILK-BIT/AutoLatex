@@ -2,6 +2,7 @@
 知识库初始化和管理模块
 """
 import os
+import json
 from typing import List, Dict
 from .vector_db import VectorDatabase
 
@@ -163,7 +164,7 @@ Jr}.\\authorrefmark{3},
         }
     },
     {
-        "journal": "arXiv",
+        "journal": "arvix",
         "document": """
 arXiv LaTeX 模版核心规范（基于官方 arxiv.sty）：
 
@@ -214,11 +215,12 @@ arXiv LaTeX 模版核心规范（基于官方 arxiv.sty）：
    - 不要混用 biblatex 与 natbib。
 """,
         "metadata": {
-            "journal_name": "arXiv",
+            "journal_name": "arvix",
             "template_type": "preprint",
             "documentclass": "article",
             "key_packages": "arxiv, natbib, graphicx, hyperref, booktabs",
             "template_dir_path": "arXiv_LaTeX_template",
+            "main_tex_path": "main.tex",
             "paper_template_specification": {
                 "document_class": "article",
                 "required_packages": ["arxiv", "natbib", "graphicx"],
@@ -230,6 +232,29 @@ arXiv LaTeX 模版核心规范（基于官方 arxiv.sty）：
         }
     }
 ]
+
+def _clean_metadata(metadata: Dict) -> Dict:
+    """
+    清理 metadata，将嵌套字典转换为 JSON 字符串
+    
+    ChromaDB 的 metadata 只支持基本类型（str, int, float, bool, None），
+    不支持嵌套字典或列表。需要将嵌套结构转换为 JSON 字符串。
+    
+    Args:
+        metadata: 原始 metadata 字典
+        
+    Returns:
+        清理后的 metadata 字典
+    """
+    cleaned = {}
+    for key, value in metadata.items():
+        if isinstance(value, (dict, list)):
+            # 将嵌套字典或列表转换为 JSON 字符串
+            cleaned[key] = json.dumps(value, ensure_ascii=False)
+        else:
+            # 基本类型直接保留
+            cleaned[key] = value
+    return cleaned
 
 def initialize_knowledge_base(persist_directory: str = "data/vector_db") -> VectorDatabase:
     """
@@ -246,7 +271,7 @@ def initialize_knowledge_base(persist_directory: str = "data/vector_db") -> Vect
     # 如果数据库为空，则初始化所有数据
     if db.get_collection_count() == 0:
         documents = [item["document"] for item in LATEX_TEMPLATE_KNOWLEDGE]
-        metadatas = [item["metadata"] for item in LATEX_TEMPLATE_KNOWLEDGE]
+        metadatas = [_clean_metadata(item["metadata"]) for item in LATEX_TEMPLATE_KNOWLEDGE]
         ids = [f"template_{item['journal'].lower().replace(' ', '_')}" for item in LATEX_TEMPLATE_KNOWLEDGE]
         
         db.add_documents(
@@ -279,7 +304,7 @@ def initialize_knowledge_base(persist_directory: str = "data/vector_db") -> Vect
                 # 新模板
                 new_templates.append(item['journal'])
                 new_documents.append(item["document"])
-                new_metadatas.append(item["metadata"])
+                new_metadatas.append(_clean_metadata(item["metadata"]))
                 new_ids.append(template_id)
             elif item['journal'] in ['BIThesis-Graduate', 'BIThesis-Undergraduate', 'BIThesis-Undergraduate-English']:
                 # BIThesis 模板需要更新（删除旧的后添加新的）
@@ -287,14 +312,14 @@ def initialize_knowledge_base(persist_directory: str = "data/vector_db") -> Vect
                     db.delete_documents(ids=[template_id])
                     updated_templates.append(item['journal'])
                     new_documents.append(item["document"])
-                    new_metadatas.append(item["metadata"])
+                    new_metadatas.append(_clean_metadata(item["metadata"]))
                     new_ids.append(template_id)
                 except Exception as e:
                     # 如果删除失败（可能不存在），仍然尝试添加
                     print(f"更新 {item['journal']} 时删除旧条目失败（可能不存在）: {e}")
                     updated_templates.append(item['journal'])
                     new_documents.append(item["document"])
-                    new_metadatas.append(item["metadata"])
+                    new_metadatas.append(_clean_metadata(item["metadata"]))
                     new_ids.append(template_id)
         
         if new_templates or updated_templates:
