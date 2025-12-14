@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LaTeX智能排版专家</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <!-- 侧边栏 -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-container">
+                <div class="logo-icon">AT</div>
+                <div class="logo-text">AutoTex</div>
+            </div>
+            <div class="collapse-icon" id="sidebar-toggle" onclick="window.toggleSidebar()">←</div>
+        </div>
+        <div class="nav-menu">
+            <div class="nav-item active">
+                <div class="nav-item-icon">📝</div>
+                <div class="nav-item-content">
+                    <div class="nav-item-title">LaTeX排版</div>
+                    <div class="nav-item-desc">智能转换论文格式</div>
+                </div>
+                <div class="nav-item-arrow">→</div>
+            </div>
+            <div class="nav-item">
+                <div class="nav-item-icon">📚</div>
+                <div class="nav-item-content">
+                    <div class="nav-item-title">期刊模板</div>
+                    <div class="nav-item-desc">支持多种期刊格式</div>
+                </div>
+                <div class="nav-item-arrow">→</div>
+            </div>
+            <div class="nav-item">
+                <div class="nav-item-icon">⚙️</div>
+                <div class="nav-item-content">
+                    <div class="nav-item-title">格式设置</div>
+                    <div class="nav-item-desc">自定义排版参数</div>
+                </div>
+                <div class="nav-item-arrow">→</div>
+            </div>
+        </div>
+        <div class="sidebar-footer">
+            <div class="footer-item">
+                <span>📖</span>
+                <span>使用文档</span>
+            </div>
+            <div class="footer-item">
+                <span>👤</span>
+                <span>登录/注册</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主内容区域 -->
+    <div class="main-content">
+        <div class="content-wrapper">
+            <!-- 标题 -->
+            <div class="title-section">
+                <div class="main-title">LaTeX智能排版专家</div>
+                <div class="subtitle">将Word/Markdown/Txt论文智能转换为符合期刊要求的LaTeX格式</div>
+            </div>
+
+            <!-- 上传卡片 -->
+            <div class="upload-card">
+                <div class="pdf-icon-container">
+                    <div class="pdf-icon">📄</div>
+                </div>
+
+                <!-- 文件上传按钮 -->
+                <div class="button-row">
+                    <div class="button-row-spacer"></div>
+                    <button class="upload-button" onclick="document.getElementById('file-input').click()">
+                        上传论文文件 ↑
+                    </button>
+                    <div class="button-row-spacer"></div>
+                </div>
+
+                <!-- 删除按钮（初始隐藏） -->
+                <div class="button-row delete-button-row" id="delete-button-row" style="display: none;">
+                    <div class="button-row-spacer"></div>
+                    <button class="delete-button" onclick="deleteFile()">删除文件 ✕</button>
+                    <div class="button-row-spacer"></div>
+                </div>
+
+                <!-- 已上传文件信息 -->
+                <div class="uploaded-file-info" id="uploaded-file-info" style="display: none;">
+                    <div class="uploaded-file-name" id="uploaded-file-name"></div>
+                </div>
+
+                <!-- 文件信息 -->
+                <div class="file-info">
+                    <div>支持文件类型: Word (.doc, .docx) | Markdown (.md, .markdown) | 文本 (.txt)</div>
+                    <div>最大文件大小: 50MB</div>
+                </div>
+
+                <!-- 隐藏的文件输入 -->
+                <input type="file" id="file-input" accept=".doc,.docx,.txt,.md,.markdown" style="display: none;" onchange="handleFileChange(event)">
+
+                <!-- 期刊类型选择和生成按钮 -->
+                <div class="model-section">
+                    <div class="model-label">期刊类型</div>
+                    <select class="model-dropdown" id="journal-dropdown">
+                        <option value="">加载中...</option>
+                    </select>
+                    <button class="translate-button" onclick="previewTemplate()">预览模板 👁️</button>
+                    <button class="translate-button" id="generate-btn" onclick="generateLatex()">生成LaTeX 📦</button>
+                </div>
+            </div>
+
+            <!-- 图片上传卡片 -->
+            <div class="image-upload-card">
+                <div class="image-upload-title" id="image-upload-title" onclick="toggleImageUpload()">
+                    <span>📐</span>
+                    <span>上传公式</span>
+                    <span class="expand-collapse-icon" id="image-upload-toggle">▼</span>
+                </div>
+
+                <!-- 图片上传内容区域（默认隐藏） -->
+                <div id="image-upload-content" class="image-upload-content-collapsed">
+                    <!-- 图片上传按钮 -->
+                    <div class="button-row">
+                        <div class="button-row-spacer"></div>
+                        <button class="image-upload-button" onclick="document.getElementById('image-input').click()">
+                            选择公式图片 📷
+                        </button>
+                        <div class="button-row-spacer"></div>
+                    </div>
+
+                    <!-- 文件信息 -->
+                    <div class="file-info" style="margin-top: 10px;">
+                        <div>支持格式: PNG (.png)</div>
+                        <div>可同时上传多张公式图片，图片将在一行显示</div>
+                    </div>
+
+                    <!-- 隐藏的图片输入 -->
+                    <input type="file" id="image-input" accept=".png" multiple style="display: none;" onchange="handleImageUpload(event)">
+
+                    <!-- 图片画廊 -->
+                    <div id="image-display">
+                        <div class="empty-gallery-message">暂无公式图片，请上传</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 模板预览区域 -->
+            <div class="template-preview" id="template-preview">
+                <div class="output-label">模板预览</div>
+                <pre id="template-preview-content"></pre>
+            </div>
+
+            <!-- 下载按钮 -->
+            <div id="download-link-container" style="margin-top: 20px; text-align: center; display: none;">
+                <button class="translate-button" id="download-pdf-btn" onclick="document.getElementById('download-link').click()" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);">
+                    ⬇️ 下载PDF
+                </button>
+                <a href="#" class="download-link" id="download-link" target="_blank" style="display: none;">⬇️ 下载PDF</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 展开侧边栏按钮（当侧边栏隐藏时显示） -->
+    <div class="expand-sidebar-btn" id="expand-sidebar-btn" onclick="window.showSidebar()">→</div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
+
