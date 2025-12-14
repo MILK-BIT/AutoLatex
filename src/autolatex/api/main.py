@@ -228,10 +228,6 @@ async def upload_paper(request: Request):
         # 创建上传目录（使用项目根目录下的绝对路径，避免相对路径引发的 File Not Found 问题）
         upload_dir = os.path.join(project_root, "data", "uploads")
         os.makedirs(upload_dir, exist_ok=True)
-        
-        # 创建图片保存目录
-        images_dir = os.path.join(project_root, "data", "uploads", "images")
-        os.makedirs(images_dir, exist_ok=True)
 
         # 获取文档文件
         file_item = None
@@ -264,6 +260,8 @@ async def upload_paper(request: Request):
         image_keys = sorted([key for key in form.keys() if key.startswith("image_")])
         print(f"[API] 找到图片字段: {image_keys}")
         
+        # 从1开始计数
+        formula_index = 1
         for image_key in image_keys:
             image_item = form.get(image_key)
             print(f"[API] 图片字段 {image_key} 类型: {type(image_item)}")
@@ -272,10 +270,17 @@ async def upload_paper(request: Request):
             if image_item and hasattr(image_item, 'read') and hasattr(image_item, 'filename'):
                 image_file = image_item
                 if image_file.filename:
-                    # 生成唯一文件名（使用UUID避免重名）
-                    file_ext = os.path.splitext(image_file.filename)[1] or ".jpg"
-                    unique_filename = f"{uuid.uuid4()}{file_ext}"
-                    image_path = os.path.abspath(os.path.join(images_dir, unique_filename))
+                    # 验证文件扩展名必须是 PNG
+                    file_ext = os.path.splitext(image_file.filename)[1].lower()
+                    if file_ext != ".png":
+                        raise HTTPException(
+                            status_code=400, 
+                            detail=f"图片格式错误：只接受 PNG 格式。当前文件: {image_file.filename}"
+                        )
+                    
+                    # 生成文件名：formula_1.png, formula_2.png, ...（强制使用 .png 扩展名）
+                    formula_filename = f"formula_{formula_index}.png"
+                    image_path = os.path.abspath(os.path.join(upload_dir, formula_filename))
                     
                     # 保存图片
                     image_content = await image_file.read()
@@ -283,7 +288,8 @@ async def upload_paper(request: Request):
                         img_f.write(image_content)
                     
                     saved_image_paths.append(image_path)
-                    print(f"[API] 保存图片: {image_file.filename} -> {image_path}")
+                    print(f"[API] 保存图片: {image_file.filename} -> {image_path} (命名为 {formula_filename})")
+                    formula_index += 1
         
         response_data = {
             "success": True,

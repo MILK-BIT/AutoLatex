@@ -1,0 +1,11 @@
+\textbf{Evaluation Metrics and Protocols}
+
+Our evaluation framework employs task-specific metrics designed to capture different aspects of temporal understanding. For the reordering task under TOU, we utilize the Positive-Negative Ratio (PNR) as the primary evaluation metric, while for other binary judgment or classification tasks, we use accuracy as the evaluation metric, similar to the approach taken for TIU. The PNR metric can measure the stability and consistency of models in local temporal order judgment. Given an image sequence with true temporal order and model-predicted ordering, for any two images in the same sequence, if they satisfy the same magnitude relationship in both the predicted ordering and true ordering, i.e., the product of their order differences is positive, then this sample is recorded as a positive pair (Positive); if this product is negative, it is recorded as a negative pair (Negative).
+
+The Positive-Negative Ratio is defined as follows:
+\begin{equation}
+\text{PNR} = \frac{\text{Number of positive pairs}}{\text{Number of negative pairs}}
+\end{equation}
+where the numerator and denominator represent the number of image pairs in the sequence that satisfy positive and negative order relationships, respectively.
+
+The PNR metric exhibits higher robustness and interpretability compared to ``full sequence accuracy.'' Unlike full sequence accuracy, which ignores potential local consistency in ordering, PNR provides more detailed measurement of model performance in order understanding by statistically analyzing the relative order relationships between all image pairs. This makes it particularly suitable for boundary cases in remote sensing imagery where visual ambiguity and unclear ordering may exist.

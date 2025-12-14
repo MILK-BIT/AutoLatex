@@ -1,41 +1,43 @@
-% Simplified main.tex for compilation test
 \documentclass[10pt,twocolumn,letterpaper]{article}
 
-% Basic packages
-\usepackage{amsmath}
-\usepackage{graphicx}
-\usepackage{hyperref}
-\usepackage{natbib}
+% CVPR template selection: using 'cvpr' for final camera-ready version
+\usepackage{cvpr}
 
-% Metadata
-\title{AutoTeX Research Paper}
-\author{
-Alice Zhang \\
-Tsinghua University \\
-{\tt\small }
-\and
-Bob Li \\
-MIT \\
-{\tt\small }
-\and
-Carol Chen \\
-HKUST \\
-{\tt\small }
-}
+% Define CVPR blue for hyperlinks
+\definecolor{cvprblue}{rgb}{0.21,0.49,0.74}
+\usepackage[pagebackref,breaklinks,colorlinks,allcolors=cvprblue]{hyperref}
+
+% Include common preamble with additional packages
+\input{preamble}
+
+% Conference metadata
+\def\confName{CVPR}
+\def\confYear{2026}
 
 \begin{document}
 
+% Title and author information
+\title{TimePerceptBench: Evaluating Temporal Understanding in Multimodal Large Language Models with Remote Sensing Imagery}
+\author{
+Ertai E\\
+Affiliation One\\
+{\tt\small email1@domain.com}
+}
+
 \maketitle
 
-% Section inputs
+% Abstract
 \input{sec/0_abstract}
-\input{sec/1_intro}
 
-% Bibliography
-{
-    \small
-    \bibliographystyle{plainnat}
-    \bibliography{main}
-}
+% Sections
+\input{sec/1_intro}
+\input{sec/2_related_works}
+\input{sec/3_tasks_datasets}
+\input{sec/4_experiments}
+\input{sec/5_conclusion}
+
+% References
+\bibliographystyle{ieeenat_fullname}
+\bibliography{main}
 
 \end{document}

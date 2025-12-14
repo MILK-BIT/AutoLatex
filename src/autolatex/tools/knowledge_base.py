@@ -161,6 +161,73 @@ Jr}.\\authorrefmark{3},
             "key_packages": "cvpr, hyperref, preamble, xcolor",
             "template_dir_path": "CVPR_2026"
         }
+    },
+    {
+        "journal": "arXiv",
+        "document": """
+arXiv LaTeX 模版核心规范（基于官方 arxiv.sty）：
+
+1. 文档类：
+
+   - 必须使用 \\documentclass{article}。
+
+   - 必须加载 \\usepackage{arxiv}，否则不符合 arXiv 官方排版。
+
+2. 编码与基础宏包：
+
+   - 推荐使用 \\usepackage[utf8]{inputenc}。
+
+   - 字体编码使用 \\usepackage[T1]{fontenc}。
+
+   - 超链接使用 \\usepackage{hyperref}。
+
+3. 参考文献（⚠️ 与 IEEE 模版完全不同）：
+
+   - **允许且推荐**使用 natbib：\\usepackage{natbib}。
+
+   - 允许使用 \\citep{} 与 \\citet{}。
+
+   - 参考文献样式通常使用 \\bibliographystyle{unsrtnat}。
+
+   - bibtex 是 arXiv 官方支持方式。
+
+4. 作者信息：
+
+   - 使用标准 \\author{...}。
+
+   - 支持 \\thanks{}、ORCID、\\href{}。
+
+   - 多作者使用 \\And 分隔。
+
+5. 图片与表格：
+
+   - 使用标准 figure / table 环境。
+
+   - 推荐加载 \\usepackage{graphicx} 与 \\usepackage{booktabs}。
+
+6. 常见避坑指南：
+
+   - 不要使用 IEEE / ACM 专用 documentclass。
+
+   - 不要删除 arxiv.sty 却仍声称是 arXiv 模版。
+
+   - 不要混用 biblatex 与 natbib。
+""",
+        "metadata": {
+            "journal_name": "arXiv",
+            "template_type": "preprint",
+            "documentclass": "article",
+            "key_packages": "arxiv, natbib, graphicx, hyperref, booktabs",
+            "template_dir_path": "arXiv_LaTeX_template",
+            "paper_template_specification": {
+                "document_class": "article",
+                "required_packages": ["arxiv", "natbib", "graphicx"],
+                "citation_commands": ["\\citep", "\\citet", "\\cite"],
+                "forbidden_packages": ["biblatex"],
+                "bib_style": "unsrtnat",
+                "image_folder": "figures"
+            }
+        }
     }
 ]
 

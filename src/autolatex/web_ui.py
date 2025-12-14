@@ -929,7 +929,7 @@ def process_file(file, journal_type, images=None):
                     image_name = os.path.basename(image_path)
                     # 使用 image_0, image_1, ... 作为字段名
                     with open(image_path, "rb") as img_f:
-                        files[f"image_{idx}"] = (image_name, img_f.read(), "image/jpeg")
+                        files[f"image_{idx}"] = (image_name, img_f.read(), "image/png")
                     image_paths.append(image_path)
                     print(f"[Web UI] 添加图片: {image_name}")
         
@@ -1705,7 +1705,8 @@ def create_interface():
                     file_upload = gr.File(
                         label="",
                         file_types=[".doc", ".docx", ".txt", ".md", ".markdown"],
-                        elem_classes=["hide-gradio-default"]
+                        elem_classes=["hide-gradio-default"],
+                        elem_id="document-upload-input"
                     )
                     
                     # 自定义上传按钮和删除按钮（居中显示）
@@ -1776,12 +1777,13 @@ def create_interface():
                     
                     # 图片上传内容区域（默认隐藏，通过CSS控制）
                     with gr.Column(visible=True, elem_id="image-upload-content", elem_classes=["image-upload-content-collapsed"]) as image_upload_content:
-                        # 图片上传组件（隐藏默认样式，限制只能上传 JPG）
+                        # 图片上传组件（隐藏默认样式，限制只能上传 PNG）
                         image_upload = gr.File(
                             label="",
-                            file_types=[".jpg", ".jpeg"],
+                            file_types=[".png"],
                             file_count="multiple",
-                            elem_classes=["hide-gradio-default"]
+                            elem_classes=["hide-gradio-default"],
+                            elem_id="image-upload-input"
                         )
                         
                         # 图片上传按钮
@@ -1796,7 +1798,7 @@ def create_interface():
                         
                         gr.HTML("""
                         <div class="file-info" style="margin-top: 10px;">
-                            <div>支持格式: JPG (.jpg, .jpeg)</div>
+                            <div>支持格式: PNG (.png)</div>
                             <div>可同时上传多张公式图片，图片将在一行显示</div>
                         </div>
                         """)
@@ -1851,7 +1853,115 @@ def create_interface():
                     fn=trigger_upload,
                     inputs=[],
                     outputs=[],
-                    js="() => { const fileInputs = document.querySelectorAll('input[type=file]'); if(fileInputs && fileInputs[0]) fileInputs[0].click(); }"
+                    js="""
+                    () => { 
+                        let docInput = null;
+                        
+                        // 方法1: 直接通过 ID 查找（最可靠的方法）
+                        docInput = document.getElementById('document-upload-input');
+                        if (docInput && docInput.tagName === 'INPUT' && docInput.type === 'file') {
+                            // 找到了，直接使用
+                        } else {
+                            // 如果直接通过ID找不到，尝试在Gradio组件中查找
+                            // Gradio可能会将ID添加到包装元素上
+                            const container = document.querySelector('[id*="document-upload-input"]');
+                            if (container) {
+                                docInput = container.querySelector('input[type=file]');
+                            }
+                        }
+                        
+                        // 方法2: 如果还是找不到，通过查找父元素来定位（文档上传在 upload-card 中）
+                        if (!docInput) {
+                            const uploadCard = document.querySelector('.upload-card');
+                            if (uploadCard) {
+                                // 在upload-card中查找，但排除图片上传区域
+                                const imageUploadContent = document.getElementById('image-upload-content');
+                                const allInputsInCard = uploadCard.querySelectorAll('input[type=file]');
+                                for (let input of allInputsInCard) {
+                                    // 检查这个input是否在图片上传区域内
+                                    let isInImageArea = false;
+                                    let parent = input.parentElement;
+                                    let depth = 0;
+                                    while (parent && depth < 10) {
+                                        if (parent.id === 'image-upload-content' || 
+                                            parent.classList.contains('image-upload-content-expanded') ||
+                                            parent.classList.contains('image-upload-content-collapsed')) {
+                                            isInImageArea = true;
+                                            break;
+                                        }
+                                        parent = parent.parentElement;
+                                        depth++;
+                                    }
+                                    // 如果不在图片上传区域，就是文档上传
+                                    if (!isInImageArea) {
+                                        docInput = input;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // 方法3: 通过 accept 属性查找文档类型的 input
+                        if (!docInput) {
+                            const fileInputs = Array.from(document.querySelectorAll('input[type=file]'));
+                            docInput = fileInputs.find(input => {
+                                const accept = input.accept || '';
+                                // 检查是否包含文档类型
+                                const hasDocType = accept.includes('.doc') || accept.includes('.docx') || 
+                                                  accept.includes('.txt') || accept.includes('.md') || 
+                                                  accept.includes('.markdown') || accept.includes('application/msword') ||
+                                                  accept.includes('application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+                                // 检查是否不包含图片类型
+                                const hasNoImageType = !accept.includes('.jpg') && !accept.includes('.jpeg') && 
+                                                      !accept.includes('image/jpeg') && !accept.includes('image/*');
+                                return hasDocType || (hasNoImageType && accept.length > 0);
+                            });
+                        }
+                        
+                        // 方法4: 通过排除图片类型来找到文档 input
+                        if (!docInput) {
+                            const fileInputs = Array.from(document.querySelectorAll('input[type=file]'));
+                            // 先找到图片input
+                            const imageInput = fileInputs.find(input => {
+                                const accept = input.accept || '';
+                                return accept.includes('.jpg') || accept.includes('.jpeg') || 
+                                       accept.includes('image/jpeg') || accept.includes('image/*');
+                            });
+                            // 如果找到了图片input，选择另一个
+                            if (imageInput && fileInputs.length > 1) {
+                                docInput = fileInputs.find(input => input !== imageInput);
+                            } else if (fileInputs.length === 1) {
+                                // 如果只有一个，检查它是否是图片类型
+                                const accept = fileInputs[0].accept || '';
+                                if (!accept.includes('.jpg') && !accept.includes('.jpeg') && 
+                                    !accept.includes('image/jpeg') && !accept.includes('image/*')) {
+                                    docInput = fileInputs[0];
+                                }
+                            }
+                        }
+                        
+                        if (docInput) {
+                            console.log('找到文档上传 input:', docInput.id || docInput.className, 'accept:', docInput.accept);
+                            // 确保 input 可见且可点击
+                            if (docInput.style.display === 'none') {
+                                docInput.style.display = 'block';
+                            }
+                            // 确保 input 没有被禁用
+                            if (docInput.disabled) {
+                                docInput.disabled = false;
+                            }
+                            docInput.click();
+                        } else {
+                            console.error('未找到文档上传 input');
+                            const fileInputs = Array.from(document.querySelectorAll('input[type=file]'));
+                            console.error('所有 file inputs:', fileInputs.map(i => ({
+                                id: i.id,
+                                accept: i.accept,
+                                parent: i.parentElement?.id || i.parentElement?.className
+                            })));
+                        }
+                    }
+                    """
                 )
                 
                 # 图片上传相关函数
@@ -1877,71 +1987,96 @@ def create_interface():
                         
                         // 如果展开了，等待一下让动画完成
                         const findAndClickInput = () => {
-                            // 查找图片上传的file input
-                            const fileInputs = Array.from(document.querySelectorAll('input[type=file]'));
-                            console.log('找到的 file inputs 数量:', fileInputs.length);
-                            
                             let imageInput = null;
-                        
-                        // 方法1: 查找 accept 属性包含 .jpg 或 .jpeg 的 input
-                        imageInput = fileInputs.find(input => {
-                            const accept = input.accept || '';
-                            return accept.includes('.jpg') || accept.includes('.jpeg') || 
-                                   accept.includes('image/jpeg') || accept.includes('image/*');
-                        });
-                        
-                        // 方法2: 通过查找图片上传区域的容器来定位 input
-                        if (!imageInput) {
-                            const imageUploadContent = document.getElementById('image-upload-content');
-                            if (imageUploadContent) {
-                                const inputsInContent = imageUploadContent.querySelectorAll('input[type=file]');
-                                if (inputsInContent.length > 0) {
-                                    imageInput = inputsInContent[0];
-                                    console.log('通过容器找到图片上传 input');
-                                }
-                            }
-                        }
-                        
-                        // 方法3: 查找所有 input，检查其父元素是否在图片上传区域内
-                        if (!imageInput) {
-                            for (let input of fileInputs) {
-                                let parent = input.parentElement;
-                                let depth = 0;
-                                while (parent && depth < 10) {
-                                    if (parent.id === 'image-upload-content' || 
-                                        parent.classList.contains('image-upload-content-expanded') ||
-                                        parent.classList.contains('image-upload-content-collapsed')) {
-                                        imageInput = input;
-                                        console.log('通过父元素找到图片上传 input');
-                                        break;
+                            
+                            // 方法1: 直接通过 ID 查找（最可靠的方法）
+                            imageInput = document.getElementById('image-upload-input');
+                            if (imageInput && imageInput.tagName === 'INPUT' && imageInput.type === 'file') {
+                                // 找到了，直接使用
+                                console.log('通过ID找到图片上传 input');
+                            } else {
+                                // 如果直接通过ID找不到，尝试在Gradio组件中查找
+                                const container = document.querySelector('[id*="image-upload-input"]');
+                                if (container) {
+                                    imageInput = container.querySelector('input[type=file]');
+                                    if (imageInput) {
+                                        console.log('通过容器ID找到图片上传 input');
                                     }
-                                    parent = parent.parentElement;
-                                    depth++;
                                 }
-                                if (imageInput) break;
                             }
-                        }
-                        
-                        // 方法4: 如果文档已上传，查找第二个 file input（假设第一个是文档上传）
-                        if (!imageInput && fileInputs.length > 1) {
-                            // 检查第一个是否是文档上传（通过检查其父元素或 accept 属性）
-                            const firstInput = fileInputs[0];
-                            const firstAccept = firstInput.accept || '';
-                            // 如果第一个 input 的 accept 不包含 image，那么第二个可能是图片上传
-                            if (!firstAccept.includes('image') && !firstAccept.includes('.jpg') && !firstAccept.includes('.jpeg')) {
-                                imageInput = fileInputs[1];
-                                console.log('使用第二个 file input（假设第一个是文档上传）');
+                            
+                            // 方法2: 通过查找图片上传区域的容器来定位 input
+                            if (!imageInput) {
+                                const imageUploadContent = document.getElementById('image-upload-content');
+                                if (imageUploadContent) {
+                                    const inputsInContent = imageUploadContent.querySelectorAll('input[type=file]');
+                                    if (inputsInContent.length > 0) {
+                                        imageInput = inputsInContent[0];
+                                        console.log('通过容器找到图片上传 input');
+                                    }
+                                }
                             }
-                        }
-                        
-                        // 方法5: 如果只有一个 file input，检查它是否是图片上传
-                        if (!imageInput && fileInputs.length === 1) {
-                            const accept = fileInputs[0].accept || '';
-                            if (accept.includes('.jpg') || accept.includes('.jpeg') || accept.includes('image')) {
-                                imageInput = fileInputs[0];
-                                console.log('使用唯一的 file input（确认是图片上传）');
+                            
+                            // 方法3: 查找所有 input，检查其父元素是否在图片上传区域内
+                            if (!imageInput) {
+                                const fileInputs = Array.from(document.querySelectorAll('input[type=file]'));
+                                for (let input of fileInputs) {
+                                    let parent = input.parentElement;
+                                    let depth = 0;
+                                    while (parent && depth < 10) {
+                                        if (parent.id === 'image-upload-content' || 
+                                            parent.classList.contains('image-upload-content-expanded') ||
+                                            parent.classList.contains('image-upload-content-collapsed')) {
+                                            imageInput = input;
+                                            console.log('通过父元素找到图片上传 input');
+                                            break;
+                                        }
+                                        parent = parent.parentElement;
+                                        depth++;
+                                    }
+                                    if (imageInput) break;
+                                }
                             }
-                        }
+                            
+                            // 方法4: 通过 accept 属性查找图片类型的 input
+                            if (!imageInput) {
+                                const fileInputs = Array.from(document.querySelectorAll('input[type=file]'));
+                                imageInput = fileInputs.find(input => {
+                                    const accept = input.accept || '';
+                                    return accept.includes('.jpg') || accept.includes('.jpeg') || 
+                                           accept.includes('image/jpeg') || accept.includes('image/*');
+                                });
+                                if (imageInput) {
+                                    console.log('通过accept属性找到图片上传 input');
+                                }
+                            }
+                            
+                            // 方法5: 如果文档已上传，查找第二个 file input（假设第一个是文档上传）
+                            if (!imageInput) {
+                                const fileInputs = Array.from(document.querySelectorAll('input[type=file]'));
+                                if (fileInputs.length > 1) {
+                                    // 检查第一个是否是文档上传（通过检查其父元素或 accept 属性）
+                                    const firstInput = fileInputs[0];
+                                    const firstAccept = firstInput.accept || '';
+                                    // 如果第一个 input 的 accept 不包含 image，那么第二个可能是图片上传
+                                    if (!firstAccept.includes('image') && !firstAccept.includes('.jpg') && !firstAccept.includes('.jpeg')) {
+                                        imageInput = fileInputs[1];
+                                        console.log('使用第二个 file input（假设第一个是文档上传）');
+                                    }
+                                }
+                            }
+                            
+                            // 方法6: 如果只有一个 file input，检查它是否是图片上传
+                            if (!imageInput) {
+                                const fileInputs = Array.from(document.querySelectorAll('input[type=file]'));
+                                if (fileInputs.length === 1) {
+                                    const accept = fileInputs[0].accept || '';
+                                    if (accept.includes('.jpg') || accept.includes('.jpeg') || accept.includes('image')) {
+                                        imageInput = fileInputs[0];
+                                        console.log('使用唯一的 file input（确认是图片上传）');
+                                    }
+                                }
+                            }
                         
                             if (imageInput) {
                                 console.log('找到图片上传 input，准备点击');
@@ -1955,6 +2090,7 @@ def create_interface():
                                 }
                                 imageInput.click();
                             } else {
+                                const fileInputs = Array.from(document.querySelectorAll('input[type=file]'));
                                 console.warn('未找到图片上传 input，所有 file inputs:', fileInputs.map(i => ({
                                     accept: i.accept,
                                     id: i.id,
