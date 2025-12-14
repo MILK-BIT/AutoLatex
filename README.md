@@ -33,12 +33,32 @@ autolatex/
             └── tasks.yaml
 ```
 
-.env 需要放入你的api和key
-我用的deepseek
-```cmd
+## 2. 配置环境
+1. 在项目根目录下创建.env文件,输入您的LLMapi的url和key
+以deepseek api为例
+```
 MODEL=openai/deepseek-chat
 OPENAI_API_KEY = <填入你的key>
 OPENAI_API_BASE=https://api.deepseek.com
 ```
-## 2. 关于与B、D同学的接口函数部分
-在src\autolatex\tools\document_tools.py和tools\knowledge_tools.py中
+2. 将终端切换到项目根目录，安装Python环境，我们建议使用Python3.11版本
+```
+uv venv --python 3.11 myenv
+```
+3. 安装所有依赖
+在终端输入
+```
+uv pip install -r requirements.txt
+```
+
+
+## 3. 启动OCR工具
+在终端输入
+```
+uvicorn ocr_api:app --host 0.0.0.0 --port 8001
+```
+
+## 4. 启动crewai将
+### 4.1 在终端启动
+### 4.2 在前端启动
+
