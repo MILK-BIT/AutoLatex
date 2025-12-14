@@ -5,7 +5,7 @@ OCR API 服务
 import os
 import io
 import logging
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, File, UploadFile, HTTPException, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from PIL import Image
@@ -64,12 +64,18 @@ async def startup_event():
 
 
 @app.post("/predict", response_model=OCRResponse)
-async def predict_latex(file: UploadFile = File(...)):
+async def predict_latex(
+    file: UploadFile = File(...),
+    max_length: int = Query(512, description="生成的最大长度，默认512，支持更长的公式"),
+    enhance: bool = Query(True, description="是否启用图片增强预处理，默认True")
+):
     """
     接收图片文件，返回识别出的 LaTeX 代码
     
     Args:
         file: 上传的图片文件
+        max_length: 生成的最大长度（默认512，支持更长的公式）
+        enhance: 是否启用图片增强预处理（默认True）
     
     Returns:
         JSON 响应，包含识别出的 LaTeX 代码
@@ -86,10 +92,14 @@ async def predict_latex(file: UploadFile = File(...)):
         contents = await file.read()
         image = Image.open(io.BytesIO(contents))
         
+        # 记录图片信息
+        logger.info(f"正在识别图片: {file.filename}, 尺寸: {image.size}, 模式: {image.mode}")
+        
         # 进行 OCR 识别
-        logger.info(f"正在识别图片: {file.filename}")
-        latex_code = model_wrapper.predict(image)
-        logger.info(f"识别结果: {latex_code[:100]}...")  # 只打印前100个字符
+        latex_code = model_wrapper.predict(image, max_length=max_length, enhance=enhance)
+        
+        logger.info(f"识别结果长度: {len(latex_code)} 字符")
+        logger.info(f"识别结果预览: {latex_code[:150]}...")  # 打印前150个字符
         
         return OCRResponse(
             latex=latex_code,
