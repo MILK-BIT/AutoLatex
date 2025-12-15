@@ -5,17 +5,47 @@ description = "autolatex using crewAI"
 authors = [{ name = "Your Name", email = "you@example.com" }]
 requires-python = ">=3.10,<3.14"
 dependencies = [
+    # --- CrewAI 相关 ---
+    "crewai[tools]>=1.5.0",
     "crewai-tools>=1.5.0",
-    "crewai[tools]==1.5.0",
+    "langchain-openai",
+    "python-dotenv",
+    "litellm>=1.80.0",
+
+    # --- 文档解析 ---
+    "markdown>=3.10",
+    "python-docx",
+    "pdfminer-six>=20251107",
+
+    # --- 向量数据库 ---
+    "chromadb>=0.4.0",
+
+    # --- 后端与 API ---
     "fastapi>=0.123.0",
+    "uvicorn[standard]>=0.24.0",
+    "python-multipart>=0.0.20",
+    "pydantic>=2.0.0",
+    "requests>=2.31.0",
+    
+    # --- 旧依赖 (如果确定不需要 Flask 可删除) ---
     "flask>=3.0.0",
     "flask-cors>=4.0.0",
+
+    # --- Web UI ---
     "gradio==5.49.1",
-    "litellm>=1.80.0",
-    "markdown>=3.10",
-    "pdfminer-six>=20251107",
-    "python-multipart>=0.0.20",
-    "requests>=2.31.0",
+
+    # --- ML/OCR/Torch (MixTex OCR) ---
+    "torch>=2.0.0",
+    "transformers>=4.44.0",
+    "accelerate>=0.33.0",
+    "peft>=0.12.0",
+    "numpy>=1.24.0",
+    "pillow>=10.0.0",
+
+    # --- 训练与工具 ---
+    "datasets>=2.20.0",
+    "tqdm>=4.66.0",
+    "modelscope>=1.15.0",
 ]
 
 [project.scripts]

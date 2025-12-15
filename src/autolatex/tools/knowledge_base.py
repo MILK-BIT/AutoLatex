@@ -56,6 +56,8 @@ Jr}.\\authorrefmark{3},
 
 \\section{Introduction}
 ...
+\\bibliographystyle{IEEEtran}
+\\bibliography{main}
 \\EOD %注意一定要有EOD
 \\end{document}
 """,
@@ -78,6 +80,7 @@ Jr}.\\authorrefmark{3},
 \\label{fig:ablation}
 \\end{figure}坚决禁止！！！！！
         3. 引用参考文档应使用\\cite{}而不是\\citep{}
+        4. 要用\\bibliographystyle{IEEEtran}而不是\\bibliographystyle{ieeeaccess}
         """
     },
 {

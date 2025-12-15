@@ -82,8 +82,23 @@ class Autolatex():
         return Agent(
             config=self.agents_config['latex_equation_form_agent'],
             # 使用封装好的 MixTex OCR API 工具
-            tools=[MixTexOCRTool()], 
+            tools=[
+                MixTexOCRTool(), 
+                FileReadTool(), 
+                SectionWriterTool()
+            ], 
             verbose=True
+        )
+    
+         # --- 新增：代码审计 Agent ---
+    @agent
+    def latex_qa_agent(self) -> Agent:
+        return Agent(
+            config=self.agents_config['latex_qa_agent'],
+            verbose=True,
+            # 它需要读文件来检查，需要写文件来修复
+            tools=[FileReadTool(), SectionWriterTool()], 
+            allow_delegation=False
         )
     
 
@@ -107,9 +122,8 @@ class Autolatex():
         return Task(
             config=self.tasks_config['equation_recognition_task'],
             # 3. 这里使用小列表
-            # Agent 只会返回它识别出来的公式代码和位置索引
-            output_pydantic=EquationList, 
-            context=[self.doc_parsing_task()] 
+            # Agent 只会返回它识别出来的公式代码和位置索引 
+            context=[self.doc_parsing_task()]
         )
 
     @task
@@ -140,6 +154,22 @@ class Autolatex():
             # 真正的代码都通过工具写进硬盘了
             output_file='output/generation_log.md' 
         )
+    
+
+    # --- 新增：代码审查任务 ---
+    @task
+    def code_review_task(self) -> Task:
+        return Task(
+            config=self.tasks_config['code_review_task'],
+            # 上下文非常重要：
+            # 1. 拿 generation_task 的结果（知道文件在哪）
+            # 2. 拿 template_retrieval_task 的结果（知道规则是什么，比如 |EOD）
+            context=[
+                self.latex_generation_task(), 
+                self.template_retrieval_task()
+            ]
+        )
+
 
     @task
     def compilation_debugging_task(self) -> Task:
@@ -161,23 +191,14 @@ class Autolatex():
         return Crew(
             agents=self.agents, # Automatically created by the @agent decorator
            tasks=[
-                # 1. 先启动模版任务（它是异步的，所以它一启动，系统就会马上执行下一个）
                 self.template_retrieval_task(),
-                
-                # 2. 紧接着启动文档解析（主线程开始）
                 self.doc_parsing_task(),
-                
-                # 3. 解析完了启动公式识别（B 依赖 A）
                 self.equation_recognition_task(),
-                
-                # 4. 此时系统会检查：
-                #    - 模版任务跑完没？
-                #    - 公式任务跑完没？
-                #    - 文档任务跑完没？
-                #    都跑完了，才开始生成 LaTeX
                 self.latex_generation_task(),
                 
-                # 5. 最后编译
+                # 🔥 插入在这里：在生成之后，编译之前
+                self.code_review_task(),
+                
                 self.compilation_debugging_task()
             ],
             process=Process.sequential,

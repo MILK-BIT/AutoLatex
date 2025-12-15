@@ -19,7 +19,7 @@ doc_parsing_task:
 # 对应流程图左上角：调用工具/生成LaTeX片段
 equation_recognition_task:
   description: >
-    分析位于 {formula_position} 的所有公式图片。
+    根据output\intermediate\formula_images_list.json给出的图片名称分析位于 {formula_position} 的所有公式图片。
     识别图片中所有复杂的视觉元素，特别是行内或块级的数学公式，以及作为图片存在的表格。
     调用指定的 OCR 工具，将这些视觉元素精准转换为标准的 LaTeX 代码片段。
   expected_output: >
@@ -34,6 +34,13 @@ template_retrieval_task:
     1. 正确的文档类声明（\documentclass ...）。
     2. 必须引入的宏包（packages）。
     3. 标题、作者、摘要和章节的特定格式要求。
+    **⚠️ 信息传递关键指令 (CRITICAL):**
+    你从知识库检索到的信息中，包含了该期刊的**特殊排版规则**（例如关于图片 \Figure、结尾 \EOD 的要求）。
+    
+    在你的 **Final Answer** 中，你必须：
+    1. 明确列出模版的物理路径。
+    2. **原封不动地复制粘贴** 知识库中的“特殊排版规范”文本。
+    3. **不要总结，不要遗漏**。下游的审计师完全依赖你的这就话来工作。如果你的回答里没写，审计师就不知道规则。
   expected_output: >
     一份详细的模板分析摘要，包含确切的模板名称、\documentclass 设置命令，
     以及该期刊排版所需的关键宏包列表和注意事项。
@@ -51,7 +58,7 @@ latex_generation_task:
     具体要求：
     - 对于图片处理，当遇到 `{"type": "image", "path": "...", "caption": "..."}` 节点时：
     提取 `path` 字段的值（例如 `E:\...\img.png`），**路径格式修正**：将路径中的反斜杠 `\` 替换为正斜杠 `/` (例如 `E:/.../img.png`)，否则 LaTeX 编译会报错。生成标准的 figure 环境代码。
-    - 对于公式的处理，当遇到`\formula{}`时在{formula_position}下找到对应名字的json文件，将其中的关于公式的Latex代码插入论文的相应位置。
+    - 对于公式的处理，当遇到`\formula{}`时在data\uploads\equation下找到对应名字的json文件，将其中的关于公式的Latex代码插入论文的相应位置。
     - 严格应用目标期刊的模板结构（如 \section, \author, \abstract）。
     - 确保所有的宏包引用完整，且图片路径正确。
 
@@ -63,11 +70,6 @@ latex_generation_task:
     5. 在生成 main.tex 时，\bibliography{...} 命令中只能填写文件名（例如 main），严禁包含文件夹路径（如 output/temp_source/main），因为编译时main.tex与main.bib都在同一目录下。
     6. 生成的main.bib中的文献引用变量名应与.tex中的对应
     7. 若公式太长，应使用split将其分为两行
-    8. 图片插入的Latex代码应这样写
-    \\Figure[t!](){parsed_images/fig1.png}
-    {Magnetization as a function of applied field.
-    It is good practice to explain the significance of the figure in the caption.\\label(fig1)}
-    不应有其他格式
 
 
     **执行流程:**
@@ -100,10 +102,37 @@ latex_generation_task:
     
     只有当所有文件都安全写入硬盘后，你才只需回复一句："所有章节已写入完成"。
   expected_output: >
-    一份简短的执行清单。例如："已写入 main.tex, sec/abstract.tex, sec/intro.tex..."。
+    包含模版物理路径、主文件名称以及**完整的排版规范文档**的详细报告。
   agent: latex_coder_agent
 
+# ... 原有任务 ...
+
 # 任务4：调试专家的任务 - 编译与闭环修复
+code_review_task:
+  description: >
+    你是代码审计师。
+    
+    **⚠️ 你的唯一真理来源：**
+    不要依赖你自己的记忆（训练数据）。你的**唯一标准**是来自 Context 中 `template_retrieval_task` 输出的 **“特殊排版规范”**。
+    注意：你千万不能编译
+    
+    **执行步骤：**
+    1. **读取标准**：先阅读 Context，找到“特殊排版规范”部分（例如 IEEE Access 要求用 `\Figure` 而不是 `figure`）。
+    2. **建立清单**：在 Thought 中列出你从 Context 里读到的规则。
+    3. **审查代码**：读取 `output/temp_source` 下的文件。
+    4. **强制修正**：
+       - 如果 Context 说要用 `\Figure`，而代码里是 `\begin【figure】` -> **必须改掉**。
+       - 如果 Context 说要用 `\EOD`，而代码里没有 -> **必须补上**。
+    5. **写入**：使用 `SectionWriterTool` 保存修改。
+    6. **批量修正**：
+       - 对于每一个需要修改的文件，**只调用一次** `SectionWriterTool` 将**修正后的完整内容**写回。
+       - **严禁**对同一个文件进行多次细微的读写操作。一次改好！
+    
+  expected_output: >
+    一份详细的审计报告，列出你检查了哪些规则（来自知识库），以及你做了哪些修改。
+  agent: latex_qa_agent
+
+# 任务5：调试专家的任务 - 编译与闭环修复
 compilation_debugging_task:
   description: >
     你是 LaTeX 编译与调试专家。
