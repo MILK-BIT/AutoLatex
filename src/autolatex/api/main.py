@@ -167,11 +167,24 @@ async def convert_paper(request: PaperConvertRequest):
         if request.image_paths:
             inputs['image_paths'] = request.image_paths
             print(f"[API] 转换请求包含 {len(request.image_paths)} 张图片")
-            # 为了兼容旧的任务描述，也提供 formula_position（使用第一张图片的路径）
-            inputs['formula_position'] = request.image_paths[0] if request.image_paths else ''
-        else:
-            # 如果没有图片，提供空字符串作为默认值
-            inputs['formula_position'] = ''
+        
+        # 设置 formula_position 为 equation 文件夹的路径
+        # 从 file_path 推断出 equation 文件夹路径（例如：data/ex2/equation）
+        file_dir = os.path.dirname(file_path)
+        equation_folder = os.path.join(file_dir, 'equation')
+        
+        # 转换为相对于项目根目录的路径
+        try:
+            # 计算相对路径
+            equation_folder_rel = os.path.relpath(equation_folder, project_root)
+            # 将路径分隔符统一为正斜杠（跨平台兼容）
+            formula_position = equation_folder_rel.replace(os.sep, '/')
+        except ValueError:
+            # 如果无法计算相对路径（在不同驱动器上），使用绝对路径
+            formula_position = equation_folder.replace(os.sep, '/')
+        
+        inputs['formula_position'] = formula_position
+        print(f"[API] formula_position 设置为: {formula_position}")
         
         # 运行 Crew
         print(f"[API] 开始执行 Crew，输入参数: {inputs}")
@@ -273,7 +286,7 @@ async def upload_paper(request: Request):
         
         # 创建以文件名命名的文件夹结构
         # data/文件名/文件名.扩展名
-        # data/文件名/equation/formula_1.png
+        # data/文件名/equation/原始图片文件名.png
         file_folder = os.path.join(project_root, "data", safe_folder_name)
         equation_folder = os.path.join(file_folder, "equation")
         
@@ -296,8 +309,6 @@ async def upload_paper(request: Request):
         image_keys = sorted([key for key in form.keys() if key.startswith("image_")])
         print(f"[API] 找到图片字段: {image_keys}")
         
-        # 从1开始计数
-        formula_index = 1
         for image_key in image_keys:
             image_item = form.get(image_key)
             print(f"[API] 图片字段 {image_key} 类型: {type(image_item)}")
@@ -314,9 +325,17 @@ async def upload_paper(request: Request):
                             detail=f"图片格式错误：只接受 PNG 格式。当前文件: {image_file.filename}"
                         )
                     
-                    # 生成文件名：formula_1.png, formula_2.png, ...（强制使用 .png 扩展名）
-                    formula_filename = f"formula_{formula_index}.png"
-                    image_path = os.path.abspath(os.path.join(equation_folder, formula_filename))
+                    # 使用原始文件名保存图片
+                    original_filename = image_file.filename
+                    image_path = os.path.abspath(os.path.join(equation_folder, original_filename))
+                    
+                    # 如果文件已存在，添加数字后缀避免覆盖
+                    base_name, ext = os.path.splitext(original_filename)
+                    counter = 1
+                    while os.path.exists(image_path):
+                        new_filename = f"{base_name}_{counter}{ext}"
+                        image_path = os.path.abspath(os.path.join(equation_folder, new_filename))
+                        counter += 1
                     
                     # 保存图片
                     image_content = await image_file.read()
@@ -324,8 +343,7 @@ async def upload_paper(request: Request):
                         img_f.write(image_content)
                     
                     saved_image_paths.append(image_path)
-                    print(f"[API] 保存图片: {image_file.filename} -> {image_path} (命名为 {formula_filename})")
-                    formula_index += 1
+                    print(f"[API] 保存图片: {image_file.filename} -> {image_path}")
         
         response_data = {
             "success": True,

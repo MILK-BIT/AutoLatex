@@ -266,7 +266,8 @@ async function generateLatex() {
         imagesToUpload.forEach((img, index) => {
             // 如果存在原始文件对象，直接使用；否则从 base64 转换
             if (img.file) {
-                formData.append('images', img.file, `formula_${index + 1}.png`);
+                // 使用原始文件名
+                formData.append('images', img.file, img.file.name);
             } else {
                 // 将 base64 数据转换为 Blob
                 const byteString = atob(img.data.split(',')[1]);
@@ -277,7 +278,9 @@ async function generateLatex() {
                     ia[i] = byteString.charCodeAt(i);
                 }
                 const blob = new Blob([ab], { type: mimeString });
-                formData.append('images', blob, `formula_${index + 1}.png`);
+                // 使用原始文件名，如果没有则使用默认名称
+                const filename = img.name || `image_${index + 1}.png`;
+                formData.append('images', blob, filename);
             }
         });
         
