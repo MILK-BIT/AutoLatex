@@ -54,7 +54,7 @@ uv pip install -r requirements.txt
 ```
 
 
-## 3. 📝启动OCR工具
+## 3. 📝启动OCR工具（需要开启VPN）
 在终端输入
 ```
 uvicorn ocr_api:app --host 0.0.0.0 --port 8001
