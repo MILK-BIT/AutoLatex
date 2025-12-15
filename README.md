@@ -40,6 +40,8 @@ autolatex/
 MODEL=openai/deepseek-chat
 OPENAI_API_KEY = <填入你的key>
 OPENAI_API_BASE=https://api.deepseek.com
+AUTOTEX_LATEX_USE_DOCKER=True
+AUTOTEX_LATEX_IMAGE=autotex-compiler
 ```
 2. 将终端切换到项目根目录，安装Python环境，我们建议使用Python3.11版本
 ```
@@ -52,7 +54,7 @@ uv pip install -r requirements.txt
 ```
 
 
-## 3. 📝启动OCR工具
+## 3. 📝启动OCR工具（需要开启VPN）
 在终端输入
 ```
 uvicorn ocr_api:app --host 0.0.0.0 --port 8001
@@ -72,4 +74,31 @@ crewai run
 
 得到的pdf与tex文件均在`output`文件夹下
 ### 4.2 在前端启动
+
+1. 首先使用 conda 创建一个 Python 3.11 环境
+```bash
+conda create -n autolatex python=3.11
+conda activate autolatex
+```
+
+2. 安装 uv 包管理器
+```bash
+pip install uv
+```
+
+3. 同步项目依赖
+```bash
+uv sync
+```
+
+4. 启动前端服务
+   - 在第一个终端运行 API 服务（用于运行前端）：
+   ```bash
+   uv run python run_api.py
+   ```
+   
+   - 在第二个终端运行应用服务：
+   ```bash
+   uv run python app.py
+   ```
 
