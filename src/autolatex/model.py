@@ -88,12 +88,14 @@ class BibEntry(BaseModel):
 class DocumentStructure(BaseModel):
     metadata: Metadata = Field(..., description="文档元信息")
     content_file_path: str = Field(description="解析后的完整内容 JSON 文件保存的本地绝对路径") 
+    formula_list_path: str = Field(..., description="提取出的待识别公式图片清单 JSON 路径")
     summary: str = Field(description="论文内容的简要概述")
     bibliography: List[BibEntry] = Field(..., description="参考文献列表")
 
 
 class ParsedResultPath(BaseModel):
     file_path: str = Field(..., description="解析后的完整数据（Metadata+Content）所在的JSON文件绝对路径")
+    formula_list_path: str = Field(..., description="提取出的待识别公式图片清单 JSON 路径")
 
 # ==========================================
 # 5. 辅助对象 (对应 Task 1 输出)

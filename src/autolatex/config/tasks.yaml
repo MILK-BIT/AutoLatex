@@ -8,16 +8,18 @@ doc_parsing_task:
     请将解析后的完整内容通过工具保存为 'parsed_content.json' 文件。
     最终只返回元数据(metadata)和该文件的路径(content_file_path)。
   expected_output: >
-    一个标准化的 JSON 对象。
+    两个个标准化的 JSON 对象。
+    1. 一个是DocumentParserTool生成的json文件
     结构应包含：{'title': '...', 'authors': [...], 'sections': [{'header': '...', 'content': '...'}]}。
     确保内容清晰、层级分明，作为后续排版工作的文本基石。
+    2. 一个是FormulaExtractorTool生成的关于原论文中用到的公式图片名称的json文档
   agent: doc_parser_agent
 
 # 任务1：C同学的任务 - 识别公式和表格
 # 对应流程图左上角：调用工具/生成LaTeX片段
 equation_recognition_task:
   description: >
-    分析位于 {formula_position} 的公式图片。
+    分析位于 {formula_position} 的所有公式图片。
     识别图片中所有复杂的视觉元素，特别是行内或块级的数学公式，以及作为图片存在的表格。
     调用指定的 OCR 工具，将这些视觉元素精准转换为标准的 LaTeX 代码片段。
   expected_output: >
@@ -49,7 +51,7 @@ latex_generation_task:
     具体要求：
     - 对于图片处理，当遇到 `{"type": "image", "path": "...", "caption": "..."}` 节点时：
     提取 `path` 字段的值（例如 `E:\...\img.png`），**路径格式修正**：将路径中的反斜杠 `\` 替换为正斜杠 `/` (例如 `E:/.../img.png`)，否则 LaTeX 编译会报错。生成标准的 figure 环境代码。
-    - 对于公式的处理，当遇到`\formula{}`时在{data\uploads\equation}下找到对应名字的json文件，将其中的关于公式的Latex代码插入论文的相应位置。
+    - 对于公式的处理，当遇到`\formula{}`时在{formula_position}下找到对应名字的json文件，将其中的关于公式的Latex代码插入论文的相应位置。
     - 严格应用目标期刊的模板结构（如 \section, \author, \abstract）。
     - 确保所有的宏包引用完整，且图片路径正确。
 
@@ -60,11 +62,13 @@ latex_generation_task:
     4. 必须生成与json中参考文献相匹配的.bib文件
     5. 在生成 main.tex 时，\bibliography{...} 命令中只能填写文件名（例如 main），严禁包含文件夹路径（如 output/temp_source/main），因为编译时main.tex与main.bib都在同一目录下。
     6. 生成的main.bib中的文献引用变量名应与.tex中的对应
-    7. 若论文模板为双栏格式且有超过五列的表格，那么表格应两列都占，即
-    \\begin{table*}[htbp]  % 注意这里的星号*
-      表格
-    \\end{table*}
-    8. 若公式太长，应使用split将其分为两行
+    7. 若公式太长，应使用split将其分为两行
+    8. 图片插入的Latex代码应这样写
+    \\Figure[t!](){parsed_images/fig1.png}
+    {Magnetization as a function of applied field.
+    It is good practice to explain the significance of the figure in the caption.\\label(fig1)}
+    不应有其他格式
+
 
     **执行流程:**
     1. **读取数据**: 使用 `FileReadTool` 读取上一步生成的 JSON。

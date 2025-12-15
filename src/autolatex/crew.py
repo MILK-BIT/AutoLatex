@@ -3,6 +3,8 @@ from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from typing import List
+
+from src.autolatex.tools.formula_name_finder.extraction_tools import FormulaExtractorTool
 from .model import DocumentStructure, EquationList,ParsedResultPath
 from autolatex.tools.document_tools import DocumentParserTool
 from autolatex.tools.latex_tools import LaTeXCompilerTool
@@ -35,7 +37,7 @@ class Autolatex():
             ),
             verbose=True,
             # 提示：这里未来需要加读取文件的工具，例如：
-            tools=[DocumentParserTool()] 
+            tools=[DocumentParserTool(),FormulaExtractorTool()] 
         )
 
     # --- 2. 模版研究 Agent ---

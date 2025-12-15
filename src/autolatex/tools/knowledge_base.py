@@ -56,7 +56,7 @@ Jr}.\\authorrefmark{3},
 
 \\section{Introduction}
 ...
-\\EOD
+\\EOD %注意一定要有EOD
 \\end{document}
 """,
         "metadata": {
@@ -70,7 +70,13 @@ Jr}.\\authorrefmark{3},
         1. 使用所给模板完成论文编写
         2. 图片插入需要严格按照这种格式
         \\Figure[t!](topskip=0pt, botskip=0pt, midskip=0pt){图片}
-{图片描述}}
+{图片描述}}，坚决禁止如下方式
+\\begin{figure}[htbp]
+\\centering
+\\includegraphics[width=0.8\linewidth]{parsed_images/427120e0-5f58-41a0-b1d7-68118c35bbdd.png}
+\\caption{Impact of frame sampling rate on model accuracy. Performance saturates after 64 frames.}
+\\label{fig:ablation}
+\\end{figure}坚决禁止！！！！！
         3. 引用参考文档应使用\\cite{}而不是\\citep{}
         """
     },
