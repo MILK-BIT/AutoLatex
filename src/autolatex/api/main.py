@@ -167,8 +167,14 @@ async def convert_paper(request: PaperConvertRequest):
         if request.image_paths:
             inputs['image_paths'] = request.image_paths
             print(f"[API] 转换请求包含 {len(request.image_paths)} 张图片")
+            # 为了兼容旧的任务描述，也提供 formula_position（使用第一张图片的路径）
+            inputs['formula_position'] = request.image_paths[0] if request.image_paths else ''
+        else:
+            # 如果没有图片，提供空字符串作为默认值
+            inputs['formula_position'] = ''
         
         # 运行 Crew
+        print(f"[API] 开始执行 Crew，输入参数: {inputs}")
         crew = Autolatex().crew()
         result = crew.kickoff(inputs=inputs)
         
@@ -205,11 +211,24 @@ async def convert_paper(request: PaperConvertRequest):
             pdf_filename=latest_pdf,
             pdf_url=pdf_url,
         )
+    except HTTPException:
+        # 重新抛出 HTTPException，让 FastAPI 处理
+        raise
     except Exception as e:
+        # 记录完整的错误堆栈
+        import traceback
+        error_trace = traceback.format_exc()
+        error_message = str(e)
+        
+        # 打印到控制台以便调试
+        print(f"[API] 论文转换失败: {error_message}")
+        print(f"[API] 错误堆栈:\n{error_trace}")
+        
+        # 返回详细的错误信息
         return PaperConvertResponse(
             success=False,
             message="论文转换失败",
-            error=str(e)
+            error=f"{error_message}\n\n详细错误信息请查看服务器日志。"
         )
 
 @app.post("/api/v1/paper/upload")
